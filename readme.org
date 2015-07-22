@@ -208,3 +208,9 @@ Let's not talk much and play with Observables to get a feel. Open `index.js` fil
   #+end_src
 
   So combineLatest waits for all the Observables to participate at least once. That's not what we always want. Sometime we want can start with a default value, and we want our resulting Observable to be working right away. For that we have startWith; it make the Observable start with the value we provide it.
+
+That's it for Observable examples. Let's move on with the tutorial, we'll discuss more operators as we use them.
+
+#+begin_src bash
+git checkout 2-hello-vdom
+#+end_src
