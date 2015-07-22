@@ -1,148 +1,210 @@
-* Yarr
-** Setup
-*** Clone this repo for reference and setup tutorial
-We will use this repository as a reference. The complete tutorial is divided into 10 steps (11 including this one if you're that guy). We'll create a new directory, clone this repo in a separate dir (this is just for reference), and we'll copy some basic setup from 0-setup step
+* Yarr : Hello RX
+/We'll proceed assuming you have the project at a stage equivalent to `step 0`. If not, clone this repo and checkout to `0-setup` git tag./
 
-*Clone this repo*
+Rx or Reactive Extensions is a javascript library for writing asynchronous/event-based code in terms of composable asynchronous-streams. An asynchronous stream/collection is represented by an *Observable*.
 
-#+begin_src bash
-git clone https://github.com/channikhabra/yarr.git ./yarr-reference
+** Observable
+Observables are central to Rx. We can think of an Observable as an array spanned over time. It's a collection which gets its values over time. Or, we can think of them as a promise which can resolve more than once.
+
+An Observable is to Promise what an Array is to a single value.
+
+#+begin_src javascript
+                          |   Imperative | Temporal   |
+                          |--------------+------------|
+                          |   Value      | Promise    |
+                          |              |            |
+                          |   Iterable   | Observable |
 #+end_src
 
-*Create an empty dir where we'll write the code*
+Let's not talk much and play with Observables to get a feel. Open `index.js` file in your favourite editor and
 
-#+begin_src bash
-mkdir ./yarr
-#+end_src
+- *Start webpack-dev-server*
 
-Now we'll copy over some setup (boilerplate?) over to this dir from 0-setup step.
+  Let's start webpack-dev-server first so it will watch for changes in our project and reload the browser on changes.
 
-*** Checkout to step 0
-Now that we have the repo cloned, let's checkout to step 0 so we can start with the tutorial.
+  #+begin_src bash
+  webpack-dev-server
+  #+end_src
 
-#+begin_src bash
-cd yarr-reference
-git checkout 0-setup
-cd ../yarr
-cp -R ../yarr-reference/* ./
-#+end_src
+- *Import Observable*
 
-This will be our clean slate, the start of the tutorial. From here on we will begin our tutorial. The project directories should look like this:
-
-#+begin_src bash
-.
-├── package.json
-├── readme.org
-├── server.js
-├── webpack.config.production.js
-└── webpack.config.js
-#+end_src
-
-
-*** Install npm modules
-
-#+begin_src bash
-npm i
-#+end_src
-
-Take a sneek-peek at package.json.
-
-- ~devDependencies~ have mostly webpack stuff, and babel. We are using babel to transpile ES6 to ES5.
-- ~dependencies~ contain the modules we'll use in the tutorial.
-  - babel-runtime
-
-    It's required for using a number of ES6 features, and generally helps if our app is split across multiple files.
-
-  - html2hscript
-
-    We're building a RSS reader, right? So eventually we'll take HTML strings (blog posts' content) from RSS Feed that we want to show in our HTML, but we are using virtual-dom, so instead of just dropping them in our document directly, we need to parse the HTML strings to virtual-dom hyperscript, and tell virtual-dom to do the rendering.
-    This is what this module do. It parse html to virtual-dom hyperscript.
-
-  - dexie
-
-    Dexie is a wrapper for indexedDB which we'll use for offline storage of the RSS feeds.
-
-  - jquery
-
-    We don't really use most of the JQuery library. We could do it without. But we'll use it in few places just to see how RxJS can interoperate with other libs like the mighty JQuery.
-
-  - rx
-
-    That's our chief guest.
-
-  - virtual-dom
-
-    Deputy chief guest? Chief guest's assistant perhaps.
-
-** Mic testing
-Let's quickly write some boilerplate to check if our setup is working as it should.
-
-- *Create /dist and /src*
-
-  If you look in the webpack.config.production.js, you'll see following config:
+  We're using ES2015, so we'll use the new module system to import `Observable` object from `rx` library we've installed as a node module. Let's remove everything from `index.js` and import Observable first.
 
   #+begin_src javascript
-    entry: './src/index',
-    output: {
-      path: path.join(__dirname, 'dist'),
-      filename: 'app.js',
-      publicPath: '/'
-    },
+  import {Observable} from 'rx';
   #+end_src
 
-  This means that webpack will enter our app from ~./src/index.js~ file, and will output the js after all pre-processing it need to do to ~./dist/app.js~ file. Let's quickly create ~dist~ and ~src~ directories.
+  Above code is roughly equivalent to `var Observable = require('rx').Observable;` in regular node.js code.
+  We are now ready to play with Observable.
 
-  #+begin_src bash
-    mkdir src dist
-    echo "console.log('hello world');" >> src/index.js
+- *Arrays to Observables*
+
+  We can convert JS arrays to Observables using `Observable.from` method.
+
+  #+begin_src javascript
+  let nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+  let nums_ = Observable.from(nums);
   #+end_src
 
-- *Check webpack is working*
+  `nums_` is my personal preference of naming Ovservables (and functions which return Observables), you don't need to follow if you don't like it. I think it help to use an underscore at the end to tell that this is a stream.
 
-  Running following command should create ~dist/app.js~ file. If it does, our setup is working and we’re good to go.
+  Observables provide an interface similar to Array extras, i.e we can use map/filter/reduce on Observables to chain operations. This flow based programming is one of the killer features of RxJS.
 
-  #+begin_src bash
-    npm run build
+  Let's filter out odd numbers from `nums_` and find evens_.
+
+  #+begin_src javascript
+  let evens_ = nums_
+                .filter(n => n % 2 === 0);
+
+  console.log(evens_);
   #+end_src
 
-  We're using npm to run our scripts
+  It'll log something like this to console:
 
-- *Create index.html*
-
-  This is the only html file we’ll write in this whole tutorial. It’s only used as an entry point for including our `dist/app.js` which will take the wheel.
-
-  #+begin_src xml
-    <!doctype html>
-    <html lang="en">
-      <head>
-        <meta charset="UTF-8"/>
-        <title>Yarr : Yet Another RSS Reader</title>
-      </head>
-
-      <body class="home-template">
-        <script src="dist/app.js"></script>
-      </body>
-    </html>
-
+  #+begin_src javascript
+  Filt.......v.ble {source: FromObservable}
   #+end_src
 
-- *Check webpack-dev-server*
+  Now that's not what we were expecting, is it? Do we expect to see a value when we log a promise? No, right?
 
-  We'll use webpack-dev-server for live-reloading. It can do more fancy tasks, but we'll not use 'em.
-  Runnng following command should start the webpack server and we'll be able to see `hello world` logged to javascript console at http://localhost:8080
+  To get a values out of an Observable, we have to subscribe to the Observable. Observable don't execute any code in the chain until and unless there is at least one active subscription to the Observable.
 
-  #+begin_src bash
-    npm start
+  Let's subscribe to our Observable to get our even numbers.
+
+  #+begin_src javascript
+  evens_.subscribe(x => console.log('Even: ', x))
   #+end_src
 
-  Again we are using Webpack to run our server and if you want to see the setup files look in `server.js`.
+  This callback is executed Observable gets a value. `Observable.subscribe` can take upto 3 methods:
+  - onNext        - executed on every value Observable gets
+  - onError       - executed if any error happens anywhere in the chain of operators
+  - onCompleted   - executed when Observable is completed
 
-If all is working well. We can move on to next step. Let's move our reference to next step (we'll code our way to this step).
+- *Ajax requests with Observable*
 
-- *Checkout to next step*
+  Observable play well with promises, and allow composition with other Observable and promises. For an example, let's make multiple ajax requests, and log their status to console.
+  #+begin_src javascript
+  import {get} from 'jQuery';
 
-  #+begin_src bash
-    cd ../yarr-reference
-    git checkout 1-hello-rx
-    cd -
+  let urls = [
+    'http://en.wikipedia.org/w/api.php?action=opensearch&format=json&search=test'
+  ];
+
+  Observable
+    .from(urls)
+    .flatMap(url => ajax({url, dataType: 'jsonp'}))
+    .subscribe(
+      res => console.log('Response: ', res),
+      err => console.error('Error while fetching:', err),
+      () => console.log('Done with all requests')
+    );
   #+end_src
+
+  Let's discuss some of Rx operators we'll be using often in our tutorial.
+
+- *Observable.prototype.flatMap*
+
+  flatMap is like combination of two operators: `map` and `flatten`. It maps a function over the source Observable, and flatten the result, i.e it assume an Observable to be returned from the function, and it returns the value of that observable. It can also resolve Promise and generators to values, like in the above example.
+
+  #+begin_src javascript
+  ----val----val----val----val---------|
+
+  -----------------map-----------------
+
+  ----Obs----Obs----Obs----Obs---------|
+
+  ----------------flat-----------------
+
+  --newVal--newVal--newVal--newVal-----|
+  #+end_src
+
+- *Observable.prototype.merge*
+
+  It merges two Observable, and produce a new one which emits the value when either one of the participant Observable emits a value.
+
+  #+begin_src javascript
+  Observable
+  .interval(1000)
+  .merge(
+    Observable.interval(2000)
+  )
+  .subscribe(x => console.log('Merged: ', x));
+  #+end_src
+
+  `Observable.interval` produces an Observable which emits an integer every N milliseconds. Above code produce output like this:
+
+  #+begin_src javascript
+  Merged:  0
+  Merged:  0
+  Merged:  1
+  Merged:  2
+  Merged:  1
+  Merged:  3
+  #+end_src
+
+  The merge operation looks somewhat like this:
+
+  #+begin_src javascript
+  ------A-------A------A--------|
+  ---B------B------B------B-----|
+          -----merge-----
+  ---B--A---B---A------A--B-----|
+  #+end_src
+
+- *Observable.prototype.zip*
+
+  #+begin_src javascript
+  let evens_ = Observable.from([0, 2, 4, 6, 8, 10]);
+  let odds_ = Observable.from([1, 3, 5, 7, 9]);
+
+  evens_
+    .zip(
+      odds_,
+      (even, odd) => even + odd
+    )
+    .subscribe(x => console.log('Even+Odd: ', x));
+  #+end_src
+
+  zip takes one or more Observables, and a callback function which it executes with values from each of the participant Observable as argument. It then creates a new Observable which emits the resulting values. Note that zip wait for each of its Observable to emit a value, and then match it. Oddly matched Observable can keep hanging forever. PS all operators are asynchronous, so there's no blocking.
+
+- *Observable.combineLatest*
+
+  combineLatest takes N Observables as argument, and a callback function which accepts N arguments, and create a new Observable. It executes the callback with latest value from each of the argument Observable, and emit the resulting value. It waits until the each of the argument Observable has emitted at least one value.
+
+  #+begin_src javascript
+  Observable
+  .combineLatest(
+    resize_,
+    click_,
+    (rE, cE) => {
+      return 'Lol!';
+    }
+  )
+  .subscribe(
+    x => console.log('Window resized or clicked', x)
+  );
+  #+end_src
+
+  Yup we can convert events to Observable! We can do that with a lot many things: promises, events, callbacks, generators, you name it.
+  Good thing about converting events to Observable is that it make you think of events in terms of data sources. Think of the clicks as a data source, which emits data whenever user clicks. It makes composing them so much simpler.
+
+  In the above example, we combineLatest resize and click events on window. If we reload and click on the page, we won't see anything in console. That's because Observable.combineLatest is waiting for the second Observable to start. Now if we resize the window just once, the click events will start getting logged on the console.
+
+- *Observable.prototype.startWith*
+
+  #+begin_src javascript
+  Observable
+  .combineLatest(
+    resize_.startWith(null),
+    click_.startWith(null),
+    (rE, cE) => {
+      return 'Lol!';
+    }
+  )
+  .subscribe(
+    x => console.log('Window resized or clicked', x)
+  );
+  #+end_src
+
+  So combineLatest waits for all the Observables to participate at least once. That's not what we always want. Sometime we want can start with a default value, and we want our resulting Observable to be working right away. For that we have startWith; it make the Observable start with the value we provide it.
