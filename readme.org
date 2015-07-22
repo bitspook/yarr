@@ -38,6 +38,7 @@ Take a sneek-peek at package.json.
 Let's quickly write some boilerplate to check if our setup is working as it should.
 
 - *Create /dist and /src*
+
   If you look in the webpack.config.js, you'll see following config:
   #+begin_src javascript
   entry: {
