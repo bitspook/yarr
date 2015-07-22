@@ -89,6 +89,8 @@ Let's first remove everything from index.js from previous step, and start with a
   But hey! We are using Rx to use the shining asynchronous data streams, right? setTimeout looks like a good place to try our hands on. It is asynchronous, and emits events more than once; in other words, perfect to replace with Observable. Let's do that.
 
   #+begin_src javascript
+  import {Observable} from 'rx';
+
   let render = (count) => <h1 className='hello-world'>Hello World {count + ''}</h1>;
 
   let view = render(0);
