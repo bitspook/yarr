@@ -2,10 +2,6 @@
   "name": "yarr",
   "version": "0.1.0",
   "description": "Yet another RSS Reader",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
   "author": "ckhabra@gmail.com (https://channikhabra.github.io/)",
   "license": "MIT",
   "devDependencies": {
@@ -23,6 +19,7 @@
   "dependencies": {
     "babel-runtime": "^5.6.17",
     "html2hscript": "^1.0.4",
+    "dexie": "^1.1.0",
     "jquery": "^2.1.4",
     "rx": "^2.5.3",
     "virtual-dom": "^2.0.1"

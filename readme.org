@@ -1,66 +1,98 @@
 * Yarr
-Yet Another RSS Reader
-
-Yarr is a small RSS reader we'll build using RxJS and ES2015 in this workshop session, with some spices:
-
-- We'll not use any JS framework
-- We'll use Virtual-DOM library for optimal DOM updates
-- We'll use delegated events
-
-** How to follow
-If you're visiting this repo on Github, you can just change to different tags and read this readme file for every step, and go through the code as you wish.
-
-If you want to follow the tutorial, follow the Tutorial section at the end of this document.
-
-** Objective
-*** Not using any framework
-- *Focus only on FRP*
-
-  The objective we want to achieve with this tutorial is to start thinking in terms of Observables (we'll come to them later). Using a framework would add another layer to worry about (slash learn). We wanna focus exclusively on FRP aspect of RxJS, and not let more than necessary abstractions from other systems hinder us.
-
-- *Come up with a sane architecture by ourself*
-
-  Not really the objective, more of a wish. Let's see if we can come up with a saner architecture without stressing it too much, without relying on a framework to force our hand to do it a certain way. You've been warned, I am a 100% self-taught, don't blame me if we end up with a pile of horseshit 😛
-
-- *Fun*
-
-  Let's just get out of the framework cage and take a breath in fresh air.
-
-*** Using Virtual DOM
-- *Focus only on FRP*
-
-  Virtual DOM is awesome. It can do changes in rendered DOM much more optimally with much little effort (from our end). We don't want to get into the intricacies of doing *proper* DOM manipulations during the tutorial. We only have 90 minutes and we wanna focus on thinking in Observables.
-
-  Moreover, Virtual-DOM actually help in creating a better architecture for our app. We'll see how.
-
-*** Using delegated events
-We'll see what they are and why we're using them later when we come to them.
-
-
-At the end of the day, it's all a fun little app, and I expect you to have fun building it with me.
-
-** Setup
-Let's setup our project to get started.
-*** Webpack
-We'll use webpack as our build tool and development assistant. It'll serve many things:
-- Transpile ES6 to ES5
-- Compile SASS to CSS
-- Concat and minify CSS/JS
-- Provide live-reload
-- Compile JSX-ish syntax to VDOM hyperscript (we'll discuss it in a minute)
-
-You can have a look at `webpack.config.js` file to
-
-** Tutorial
-First this we need to do is clone this tutorial. This tutorial is written in steps. Each step is represented as a git tag. We can checkout to the tag we want, try to do the tasks for the step, commit them, and checkout to next step if you'd want to start with a fresh slate.
-
-*** Clone this repo
+** Install npm modules
 #+begin_src bash
-git clone https://github.com/channikhabra/yarr
+cd to/where/you/cloned/this/repo
+npm i
 #+end_src
 
-*** Checkout to step 0
-Now that we have the repo cloned, let's checkout to step 0 so we can start with the tutorial.
-#+begin_src bash
-git checkout
-#+end_src
+Take a sneek-peek at package.json.
+
+- `devDependencies` have mostly webpack stuff, and babel. We are using babel to transpile ES6 to ES5.
+- `dependencies` contain the modules we'll use in the tutorial.
+  - babel-runtime
+
+    It's required for using a number of ES6 features, and helps in general if our app is split across multiple files.
+
+  - html2hscript
+
+    We're building a RSS reader, right? So at the end of the day, we'll get HTML strings (the blog posts' content) that we'll want to show in our HTML, but we are using virtual-dom, so instead of just dropping in our document directly, we parse the HTML strings to virtual-dom hyperscript, and tell virtual-dom to do the rendering.
+    This is what this module do. It parse html to virtual-dom hyperscript.
+
+  - dexie
+
+    Dexie is a wrapper for indexedDB which we'll use for offline storage of RSS feeds.
+
+  - jquery
+
+    We don't really use most of jquery. We don't really need any of jquery. But we'll use it in few places just to see how RxJS can interoperate with other libs like the mighty jquery.
+
+  - rx
+
+    That's our chief guest.
+
+  - virtual-dom
+
+    Deputy chief guest? Chief guest's assistant perhaps.
+
+** Mic testing
+Let's quickly write some boilerplate to check if our setup is working as it should.
+
+- *Create /dist and /src*
+  If you look in the webpack.config.js, you'll see following config:
+  #+begin_src javascript
+  entry: {
+    app: ['./src/index.js']
+  },
+  output: {
+    filename: 'dist/[name].js'
+  },
+  #+end_src
+
+  This means that webpack will enter our app from `./src/index.js` file, and will output the js after all pre-processing it need to do to `./dist/app.js` file. Let's quickly create `dist` and `src` directories.
+
+  #+begin_src bash
+  mkdir src dist
+  echo "console.log('hello world');" >> src/index.js
+  #+end_src
+
+- *Check webpack is working*
+
+  Running following command should create `dist/app.js` file. If it does, our setup is working and we're good to go.
+  #+begin_src bash
+  webpack -p
+  #+end_src
+
+- *Create index.html*
+
+  This is the only html file we'll write in this whole tutorial. Only an entry point for including our `dist/app.js` which'll take the wheel.
+  #+begin_src xml
+  <!doctype html>
+  <html lang="en">
+    <head>
+      <meta charset="UTF-8"/>
+      <title>Yarr : Yet Another RSS Reader</title>
+    </head>
+
+    <body class="home-template">
+      <script src="dist/app.js"></script>
+    </body>
+  </html>
+
+  #+end_src
+
+- *Check webpack-dev-server*
+
+  We'll use webpack-dev-server for live-reloading. It can do more fancy tasks, but we'll not use 'em.
+  Runnng following command should start the webpack server and we'll be able to see `hello world` logged to javascript console at http://localhost:8080
+
+  #+begin_src bash
+  webpack-dev-server
+  #+end_src
+
+
+If all is working well. We can move on to next step.
+
+- *Checkout to next step*
+  #+begin_src javascript
+  git checkout 1-hello-rx
+  #+end_src
