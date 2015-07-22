@@ -89,5 +89,28 @@ Let's first remove everything from index.js from previous step, and start with a
   But hey! We are using Rx to use the shining asynchronous data streams, right? setTimeout looks like a good place to try our hands on. It is asynchronous, and emits events more than once; in other words, perfect to replace with Observable. Let's do that.
 
   #+begin_src javascript
+  let render = (count) => <h1 className='hello-world'>Hello World {count + ''}</h1>;
 
+  let view = render(0);
+  let rootNode = createElement(view);
+  document.body.appendChild(rootNode);
+
+  Observable
+    .interval(1000) //replace the steTimeout and `count` state variable. Interval will give us an increment-ing number every 1000 milliseconds
+    .map(n => render(n + 1)) //n+1 because we already started with 0
+    .subscribe(
+      newView => {
+        let patches = diff(view, newView);
+        rootNode = patch(rootNode, patches);
+        view = newView;
+      }
+    );
   #+end_src
+
+  Sweet! Isn't it? Go eat some candy if you said no.
+
+Now that we know how to work with Rx and virtual-dom, let's start building our app: Yet Another RSS Reader (Yarr).
+
+#+begin_src
+git checkout 3-renderer
+#+end_src
