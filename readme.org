@@ -1,216 +1,93 @@
-* Yarr : Hello RX
-/We'll proceed assuming you have the project at a stage equivalent to `step 0`. If not, clone this repo and checkout to `0-setup` git tag./
+* Yarr : Hello vDOM
+Let's play with vitual DOM for a minute before we start with building our RSS reader. Rendering HTML to page is almost an important part you know!
 
-Rx or Reactive Extensions is a javascript library for writing asynchronous/event-based code in terms of composable asynchronous-streams. An asynchronous stream/collection is represented by an *Observable*.
+Let's first remove everything from index.js from previous step, and start with a clean stage.
 
-** Observable
-Observables are central to Rx. We can think of an Observable as an array spanned over time. It's a collection which gets its values over time. Or, we can think of them as a promise which can resolve more than once.
-
-An Observable is to Promise what an Array is to a single value.
-
-#+begin_src javascript
-                          |   Imperative | Temporal   |
-                          |--------------+------------|
-                          |   Value      | Promise    |
-                          |              |            |
-                          |   Iterable   | Observable |
-#+end_src
-
-Let's not talk much and play with Observables to get a feel. Open `index.js` file in your favourite editor and
-
-- *Start webpack-dev-server*
-
-  Let's start webpack-dev-server first so it will watch for changes in our project and reload the browser on changes.
-
-  #+begin_src bash
-  webpack-dev-server
-  #+end_src
-
-- *Import Observable*
-
-  We're using ES2015, so we'll use the new module system to import `Observable` object from `rx` library we've installed as a node module. Let's remove everything from `index.js` and import Observable first.
+- *Import Virtual-DOM*
 
   #+begin_src javascript
-  import {Observable} from 'rx';
+    import {h} from 'virtual-dom';
+    import createElement from 'virtual-dom/create-element';
   #+end_src
 
-  Above code is roughly equivalent to `var Observable = require('rx').Observable;` in regular node.js code.
-  We are now ready to play with Observable.
+- *Hello world*
 
-- *Arrays to Observables*
-
-  We can convert JS arrays to Observables using `Observable.from` method.
+  `h` is a function provided by virtual-dom for creating hyperscript. The hyperscript created using `h` is then passed to `createElement` to create a virtual-node or vNode, which then is put into the HTML page.
+  Let's quickly create a hello vDOM.
 
   #+begin_src javascript
-  let nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  let hw = h('h1', {className: 'hello'}, ["Hello World"]);
+  let hwNode = createElement(hw);
 
-  let nums_ = Observable.from(nums);
+  document.body.appendChild(hwNode);
   #+end_src
 
-  `nums_` is my personal preference of naming Ovservables (and functions which return Observables), you don't need to follow if you don't like it. I think it help to use an underscore at the end to tell that this is a stream.
+  `h` takes these arguments:
+  - tag name      : {string}
+  - attributes    : {object}
+  - children      : {array}
 
-  Observables provide an interface similar to Array extras, i.e we can use map/filter/reduce on Observables to chain operations. This flow based programming is one of the killer features of RxJS.
+- *Virtual-dom Loader for HTMLish syntax*
 
-  Let's filter out odd numbers from `nums_` and find evens_.
+  It can be quite sweet writing HTML this way, but let's not do it today. We've included virtual-dom loader in our webpack config, which allow us to write HTMLish code in our JS, and give us what `h` would.
+  So we can write hello-vdom like this:
+  #+begin_src javascript
+  let hw = <h1 className='hello-world'>Hello World</h1>
+  let hwNode = createElement(hw);
+
+  document.body.appendChild(hwNode);
+  #+end_src
+
+  But it require `h` to be present in scope to use this.
+
+- *Updating DOM*
+
+  But this is for rendering once, right? The reason we're using virtual-dom is to make optimal DOM updates. To do the updates on the DOM, we need to import `diff` and `patch` from virtual-dom.
 
   #+begin_src javascript
-  let evens_ = nums_
-                .filter(n => n % 2 === 0);
-
-  console.log(evens_);
+  import diff from 'virtual-dom/diff';
+  import patch from 'virtual-dom/patch';
   #+end_src
 
-  It'll log something like this to console:
+  Virtual-dom always keep one copy of the DOM it has rendered in memory. When we want to make some update in the DOM, we just recreate the whole view, and tell virtual-dom to render the new one. At this point, it diff the new DOM with the old copy it has, and patch the previous view with the diff.
+  An example of a counter built using `setInterval` and virtual DOM would look like this:
 
   #+begin_src javascript
-  Filt.......v.ble {source: FromObservable}
+  let render = (count) => <h1 className='hello-world'>Hello World {count + ''}</h1>;
+  //we did a `count = ''` above because `h` can't handle integers in this case, it need strings
+
+  let count = 0;
+
+  //render gives us our whole view, only one h1 in our case
+  let view = render(count);
+  //in virtual DOM, there has to be a single ultimate parent to hold all vNodes. Let's call it rootNode
+  let rootNode = createElement(view)
+
+  document.body.appendChild(rootNode);
+
+  setInterval(function() {
+    count ++;
+
+    //we create new view with new state
+    let newView = render(count);
+    //now let's diff the old with the new view and create patches
+    let patches = diff(view, newView);
+    //let's create new rootNode by patching the old rootNode with the patches we got from diffing
+    rootNode = patch(rootNode, patches);
+    //and change our saved view for diffing next time we need to update DOM
+    view = newView;
+
+  }, 1000);
   #+end_src
 
-  Now that's not what we were expecting, is it? Do we expect to see a value when we log a promise? No, right?
+  Tada!
 
-  To get a values out of an Observable, we have to subscribe to the Observable. Observable don't execute any code in the chain until and unless there is at least one active subscription to the Observable.
+  So this is how we will use virtual-dom.
 
-  Let's subscribe to our Observable to get our even numbers.
+- *vDOM with RxJS*
+
+  But hey! We are using Rx to use the shining asynchronous data streams, right? setTimeout looks like a good place to try our hands on. It is asynchronous, and emits events more than once; in other words, perfect to replace with Observable. Let's do that.
 
   #+begin_src javascript
-  evens_.subscribe(x => console.log('Even: ', x))
+
   #+end_src
-
-  This callback is executed Observable gets a value. `Observable.subscribe` can take upto 3 methods:
-  - onNext        - executed on every value Observable gets
-  - onError       - executed if any error happens anywhere in the chain of operators
-  - onCompleted   - executed when Observable is completed
-
-- *Ajax requests with Observable*
-
-  Observable play well with promises, and allow composition with other Observable and promises. For an example, let's make multiple ajax requests, and log their status to console.
-  #+begin_src javascript
-  import {get} from 'jQuery';
-
-  let urls = [
-    'http://en.wikipedia.org/w/api.php?action=opensearch&format=json&search=test'
-  ];
-
-  Observable
-    .from(urls)
-    .flatMap(url => ajax({url, dataType: 'jsonp'}))
-    .subscribe(
-      res => console.log('Response: ', res),
-      err => console.error('Error while fetching:', err),
-      () => console.log('Done with all requests')
-    );
-  #+end_src
-
-  Let's discuss some of Rx operators we'll be using often in our tutorial.
-
-- *Observable.prototype.flatMap*
-
-  flatMap is like combination of two operators: `map` and `flatten`. It maps a function over the source Observable, and flatten the result, i.e it assume an Observable to be returned from the function, and it returns the value of that observable. It can also resolve Promise and generators to values, like in the above example.
-
-  #+begin_src javascript
-  ----val----val----val----val---------|
-
-  -----------------map-----------------
-
-  ----Obs----Obs----Obs----Obs---------|
-
-  ----------------flat-----------------
-
-  --newVal--newVal--newVal--newVal-----|
-  #+end_src
-
-- *Observable.prototype.merge*
-
-  It merges two Observable, and produce a new one which emits the value when either one of the participant Observable emits a value.
-
-  #+begin_src javascript
-  Observable
-  .interval(1000)
-  .merge(
-    Observable.interval(2000)
-  )
-  .subscribe(x => console.log('Merged: ', x));
-  #+end_src
-
-  `Observable.interval` produces an Observable which emits an integer every N milliseconds. Above code produce output like this:
-
-  #+begin_src javascript
-  Merged:  0
-  Merged:  0
-  Merged:  1
-  Merged:  2
-  Merged:  1
-  Merged:  3
-  #+end_src
-
-  The merge operation looks somewhat like this:
-
-  #+begin_src javascript
-  ------A-------A------A--------|
-  ---B------B------B------B-----|
-          -----merge-----
-  ---B--A---B---A------A--B-----|
-  #+end_src
-
-- *Observable.prototype.zip*
-
-  #+begin_src javascript
-  let evens_ = Observable.from([0, 2, 4, 6, 8, 10]);
-  let odds_ = Observable.from([1, 3, 5, 7, 9]);
-
-  evens_
-    .zip(
-      odds_,
-      (even, odd) => even + odd
-    )
-    .subscribe(x => console.log('Even+Odd: ', x));
-  #+end_src
-
-  zip takes one or more Observables, and a callback function which it executes with values from each of the participant Observable as argument. It then creates a new Observable which emits the resulting values. Note that zip wait for each of its Observable to emit a value, and then match it. Oddly matched Observable can keep hanging forever. PS all operators are asynchronous, so there's no blocking.
-
-- *Observable.combineLatest*
-
-  combineLatest takes N Observables as argument, and a callback function which accepts N arguments, and create a new Observable. It executes the callback with latest value from each of the argument Observable, and emit the resulting value. It waits until the each of the argument Observable has emitted at least one value.
-
-  #+begin_src javascript
-  Observable
-  .combineLatest(
-    resize_,
-    click_,
-    (rE, cE) => {
-      return 'Lol!';
-    }
-  )
-  .subscribe(
-    x => console.log('Window resized or clicked', x)
-  );
-  #+end_src
-
-  Yup we can convert events to Observable! We can do that with a lot many things: promises, events, callbacks, generators, you name it.
-  Good thing about converting events to Observable is that it make you think of events in terms of data sources. Think of the clicks as a data source, which emits data whenever user clicks. It makes composing them so much simpler.
-
-  In the above example, we combineLatest resize and click events on window. If we reload and click on the page, we won't see anything in console. That's because Observable.combineLatest is waiting for the second Observable to start. Now if we resize the window just once, the click events will start getting logged on the console.
-
-- *Observable.prototype.startWith*
-
-  #+begin_src javascript
-  Observable
-  .combineLatest(
-    resize_.startWith(null),
-    click_.startWith(null),
-    (rE, cE) => {
-      return 'Lol!';
-    }
-  )
-  .subscribe(
-    x => console.log('Window resized or clicked', x)
-  );
-  #+end_src
-
-  So combineLatest waits for all the Observables to participate at least once. That's not what we always want. Sometime we want can start with a default value, and we want our resulting Observable to be working right away. For that we have startWith; it make the Observable start with the value we provide it.
-
-That's it for Observable examples. Let's move on with the tutorial, we'll discuss more operators as we use them.
-
-#+begin_src bash
-git checkout 2-hello-vdom
-#+end_src
