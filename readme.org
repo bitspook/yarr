@@ -1,211 +1,360 @@
-* Yarr : Delegated Events
-
-We have our pretty components system set up, but what about events? Users will be interacting with our app, right?
-Since we're taking so much "inspiration" from React, how does React handle events? Really? You want to get into those "onClick" stuff? I mean they are pretty, I've nothing against them, but given a choice I won't really vouch for them either. That said, I don't want to get into "when a component is ready and when it's re-rendered" events either.
-
-Another hint, Observable are good at chaining operations (dead give away, *filter*). What if we use delegated events? Like put an event listener on ~document.body~, and filter it to the target we want? Let's try this. Let's create a counting button component (and remove other components from our previous step).
-
-Our project shall look like this atm:
-
-#+begin_src bash
-.
-├── index.html
-├── package.json
-├── src
-│   ├── components
-│   │   └── main.js
-│   ├── index.js
-│   └── renderer.js
-├── server.js
-├── webpack.config.js
-└── webpack.config.production.js
-#+end_src
-
-Also clean-up the `components/main.js`.
-
-- *Count clicks Component*
-
-Let's create a new component which will count the clicks that are made to a button.
+* Yarr : Fetching Feeds and Styles
+Now that we know how we are going to render our views, let's do some work on the data that we are going to render. An RSS feed reader will render: RSS Feeds.
+Create a file ~src/feeds.js~:
 
 #+begin_src javascript
-//components/count-clicks.js
+import {Observable} from 'rx';
+import {ajax} from 'jQuery';
+
+let feedUrls = [
+  'https://hacks.mozilla.org/category/es6-in-depth/feed/',
+  'http://feeds.feedburner.com/JohnResig',
+  'http://unisonweb.org/feed.xml'
+];
+
+let fetchFeed = (url) => {
+  return ajax({
+    url: `http://ajax.googleapis.com/ajax/services/feed/load?v=1.0&num=30&q=${url}`,
+    dataType: 'jsonp'
+  }).promise();
+};
+
+let feeds_ = Observable
+      .from(feedUrls)
+      .flatMap(fetchFeed);
+
+export {feeds_};
+#+end_src
+
+That should not be a lot to take in one bite. We imported ~ajax~ from jquery, and created a helper method to make a request and return it as a promise. Now why are we making a request to ~http://ajax.googleapis.com/ajax/services/feed/load?v=1.0&num=30&q=${url}~ ? Turns out, not all RSS feed generators put proper ~Allow-Origin~ header on RSS feed responses, so browser rubs a Cross Origin Error in our face. Google provide this nice API which can parse the RSS feed and provide us response as JSONP. Awesome!
+
+Next we wanna create an Observable of RSS feeds. We are starting with an array of feed URLs to, so we convert it to an Observable with ~Observable.from~, and ~flatMap~ each url with ~fetchFeed~. Hmmm...what could that do?
+
+Let's quickly create a ~postsList~ component, and import our feeds in it. Follow me real quick.
+
+Delete `components/count-clicks.js` we created in previous step. And create ~components/posts-list.js~.
+
+#+begin_src javascript
+//components/posts-list.js
 import h from 'virtual-dom/h';
 import {Observable} from 'rx';
 
-let view = (count) =>
-  <div className="count-clicks">
-    <button className="count-clicks-btn">Click me!</button>
-    <span style="font-size: 20px;">{count}</span>
-  </div>
+import {feeds_} from '../feeds';
+
+let postView = (post) => {
+  return
+    <li>{post.title}</li>;
+}
+
+let view = (postsView) => {
+  return <ul className="posts-list">
+    {postsView}
+    </ul>
+    ;
+}
 
 let render_ = () => {
-  let count = 0;
-
-  return Observable.
-    return(view(count + ''));
+  return Observable
+    .return(view());
 }
 
 export default render_;
 #+end_src
 
-And our ~components/main.js~ will be:
+And our ~components/main.js~ will then be:
 
 #+begin_src javascript
 import h from 'virtual-dom/h';
 import {Observable} from 'rx';
 
-import countClicks_ from './count-clicks';
+import postsList_ from './posts-list';
 
-let view = (countClicks) => {
+let view = (postsList) => {
   return <div className="container">
-    {countClicks}
+    {postsList}
   </div>;
 }
 
 let render_ = () => Observable
       .combineLatest(
-        countClicks_(),
+        postsList_(),
         view
       );
 
 export default render_;
 #+end_src
 
-Great! Now we want to listen to the click events on our ~.count-clicks-btn~. Virtual-DOM/React way of doing that is to provide an `onClick` handler in properties, but we don't want to do that way. We want to use delegated events instead. So let's do that.
-
-Create ~./src/events.js~ file. We'll put our source events code there, and make the events pass through a chain of Observable operators so we get only the events we need.
+Our plan is to somehow use ~feeds_~ to get (blog) posts, and pass those posts to ~postView~, and generate a view for each post. Let's now play around with ~feeds_~ in ~posts-list.js~.
 
 #+begin_src javascript
-//src/events.js
-import {Observable} from 'rx';
-
-let body = document.body;
-
-let clicks_ = Observable.fromEvent(body, 'click');
-
-let toArray = (arrayLike) => Array.prototype.slice.call(arrayLike, 0);
-
-let countBtnClicks_ = clicks_
-      .filter(e => {
-        let classes = toArray(e.target.classList);
-
-        return classes.indexOf('count-clicks-btn') >= 0;
-      });
-
-
-export {countBtnClicks_};
-#+end_src
-
-We've put a `click` event listener on body, and then we're filtering it by 'class name' so we only get the clicks for our button. Let's import these events to our `countClicks` component and check by subscribing to it.
-
-#+begin_src javascript
-//components/count-clicks.js
+//components/posts-list.js
 .
 .
 .
-import {countBtnClicks_} from '../events';
-countBtnClicks_
-  .subscribe(x => console.log(x));
-#+end_src
-
-Voila! it's working. We'll use this system of delegated events in our app. Let's make the `events.js` code more re-useable.
-
-#+begin_src javascript
-//events.js
-import {Observable} from 'rx';
-import {toArray} from './utils';
-
-
-let body = document.body;
-
-let clicks_ = Observable.fromEvent(body, 'click');
-
-
-let clicksByClass_ = (className) => clicks_
-      .filter(e => {
-        let classes = toArray(e.target.classList);
-
-        return classes.indexOf(className) >= 0;
-      });
-
-
-export {clicksByClass_};
-#+end_src
-
-#+begin_src javascript
-//components/count-clicks.js
-import h from 'virtual-dom/h';
-import {Observable} from 'rx';
-
-import {clicksByClass_} from '../events';
-
-let view = (count) =>
-    <div className="count-clicks">
-      <button className="count-clicks-btn">Click me!</button>
-      <span> {count}</span>
-    </div>;
-
-let render_ = () => {
-  let count = 0;
-
-  return Observable.
-    return(view(count + ''));
-}
-
-clicksByClass_('count-clicks-btn')
-  .subscribe(x => console.log(x));
+feeds_
+  .subscribe(
+    feed => {
+      console.log(feed);
+    },
+    err =>
+      console.warn('Error while getting feeds: ', err)
+  );
 
 export default render_;
 #+end_src
 
-And create a `src/utils.js` to keep small utility methods:
+In console we can see /jQuery response/ objects logged. In ~src/feeds.js~, we can see we made requests for each feed-url with a function ~fetchFeed~ which returns a promise. And we do so in ~flatMap~. Remember what flatMap does? It flattens the Observable, and give us its value(s). RxJS support promises and implicitly convert them to Observable for us. So we can do ~flatMap(fetchFeeds)~, and get an Observable of responses. That's great! But we want Observable of blog-posts, so let's process the responses and return blog posts instead.
 
 #+begin_src javascript
-//src/utils.js
-export default {
-  toArray: (arrayLike) => Array.prototype.slice.call(arrayLike, 0)
+//feeds.js
+.
+.
+.
+let feeds_ = Observable
+      .from(feedUrls)
+      .flatMap(fetchFeed)
+      .map(res => res.responseData.feed.entries);
+
+export {feeds_};
+#+end_src
+
+There we go. It'll log arrays of blog-posts in console. We can use this Observable to create our views I guess. Let's get back in ~components/posts-list.js~:
+
+#+begin_src javascript
+//components/posts-list.js
+.
+.
+.
+let render_ = () => {
+  return feeds_
+    .map(posts => posts.map(postView))
+    .map(view);
 }
 #+end_src
 
-Now that we have clicks as an Observable, we can use them to produce our `countClicks` component's view:
+We can now see the list of post titles on our page. But, the posts for one feed gets rendered, and then gets replaced by next feed, eventually only one feed's posts appear. Can you guess why? Well of course you can, you're smart, ain't you?
+
+We need to collect all the feeds in one big array, otherwise every time `map` runs on a feed, it'll replace the previous view. How to we convert an array to a single value? ~reduce~ you said!
 
 #+begin_src javascript
-//components/count-clicks.js
+//components/posts-list.js
+.
+.
+.
+let render_ = () => {
+  return feeds_
+    .map(posts => posts.map(postView))
+    .reduce((acc, posts) => acc.concat(posts))
+    .map(view);
+}
+#+end_src
+
+Doing this looks like solving our problem at hand, but it will actually cause some trouble in future. But we will not tackle it now. We are building an RSS reader, an RSS reader without offline useability is simply stupid imo. We we'll have offline storage, which will change the way we approach modeling our data. So let's leave the feeds like this for the moment.
+
+- *Proper Looks*
+
+Since now we have our data, let's put it in proper views. Copy the ~src/styles~ from this commit to your ~src~ folder, and add this line to your ~src/index.js~:
+
+#+begin_src javascript
+import mainView_ from './components/main';
+import render from './renderer';
+
+require('./styles/style.scss');  //new code
+
+let view_ = mainView_();
+
+render(view_, document.getElementById('app'));
+#+end_src
+
+Don't worry, I copied a lot of them from [[https://github.com/oswaldoacauan/ghostium][ghostium]] anyway.
+
+This will create ~/style.css~ file, which we shall include in ~/index.html~
+
+#+begin_src xml
+  <head>
+    <meta charset="UTF-8"/>
+    <title>Yarr : Yet Another RSS Reader</title>
+
+    <link href="styles.css" rel="stylesheet"/>
+  </head>
+#+end_src
+
+Now that we have all the styles, let's add the proper markup too:
+
+#+begin_src javascript
+//components/main.js
 import h from 'virtual-dom/h';
 import {Observable} from 'rx';
 
-import {clicksByClass_} from '../events';
+import postsList_ from './posts-list';
 
-let view = (count) =>
-    <div className="count-clicks">
-      <button className="count-clicks-btn">Click me!</button>
-      <span> {count}</span>
-    </div>;
+let view = (postsList) => {
+return <div id='container' className='container'>
+        <div className="surface">
+          <div className="surface-container">
+            <div className="content">
+              <div className="wrapper">
+                <div className="wrapper-container">{postsList}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+}
+
+let render_ = () => Observable.combineLatest(
+    postsList_(),
+    view
+);
+
+
+export default render_;
+#+end_src
+
+And ~posts-list.js~
+#+begin_src javascript
+//components/posts-list.js
+import h from 'virtual-dom/h';
+import {Observable} from 'rx';
+
+import {feeds_} from '../feeds';
+import {formatDate} from '../utils';
+
+let postView = (post) =>
+    <article className="post-item post">
+      <header className="post-item-header">
+        <h2 className="post-item-title">
+          <a className='post-title' href={post.link}>{post.title}</a>
+          </h2>
+      </header>
+      <section className="post-item-excerpt">
+        {post.contentSnippet}
+      </section>
+
+      <footer className="post-item-footer">
+        <ul className="post-item-meta-list">
+          <li className="post-item-meta-item">
+            <p><a href={post.link}>{post.author}</a>
+            </p>
+          </li>
+
+          <li className="post-item-meta-item">
+            <p>
+              {formatDate(post.publishedDate)}
+            </p>
+          </li>
+
+          <li className="post-item-meta-item">
+            <p itemprop="articleSection">{post.categories.join(', ')}</p>
+          </li>
+        </ul>
+      </footer>
+    </article>
+  ;
+
+
+let view = (postViews) =>
+  <section className="post-list">
+    {postViews}
+  </section>;
 
 let render_ = () => {
-  let count = 0;
-  let countBtnClicks_ = clicksByClass_('count-clicks-btn');
-
-  return countBtnClicks_
-    .map(e => ++count)
-    .startWith(0) //nothing will get rendered if we take this away
-    .map(n => n.toString())
+  return feeds_
+    .map(posts => posts.map(postView))
+    .reduce((acc, posts) => acc.concat(posts))
     .map(view);
 }
 
 export default render_;
 #+end_src
 
-Our app is working! What kind of sorcery is this?
+Note that we're importing ~formatDate~ from ~utils.js~. Let's add that too.
 
-Honestly, if you were paying attention this won't look like sorcery at all. ~countBtnCicks_~ gives us a notification (in form of an event) every time the user clicks our button, we convert that to an incrementing count. Next is ~startWith(0)~, remember why we need it? Without startWith, our renderer will keep waiting for countBtnClicks_ to emit at least once (because we use `combineLatest` to combine all views), and countBtnClicks_ will emit only if user clicks on the button. But there is no button rendered yet! To get out of this loop, we start it with an initial value.
+#+begin_src javascript
+//src/utils.js
+export default {
+  toArray: (arrayLike) => Array.prototype.slice.call(arrayLike, 0),
+  formatDate: (date) => {
+    if(!date) return '';
 
-Great! With that out of the way, we have our component system and events system in place, we can finally start building our app. Lol, I lied to you like 2 steps back that we're building Yarr back then. Can't believe you fell for that you dumb fuck.
+    if(typeof date === 'string')
+      date = new Date(date);
 
-Just kidding, I don't really think you are a dumb fuck. Dumb fucks are cool.
+    let monthNames = [
+      'January', 'February', 'March',
+      'April', 'May', 'June', 'July',
+      'August', 'September', 'October',
+      'November', 'December'
+    ];
 
-Let's move to next step then.
+    let day = date.getDate(),
+        monthIndex = date.getMonth(),
+        year = date.getFullYear();
+
+    return `${day}, ${monthNames[monthIndex]}, ${year}`;
+  },
+}
+#+end_src
+
+View is much better now, isn't it? Go eat some candies if you said no.
+
+You would've noticed there's room for a sidebar there. Let's add the sidebar real quick. Create ~components/sidebar.js~
+
+#+begin_src javascript
+import {Observable} from 'rx';
+import h from 'virtual-dom/h';
+
+let view = () =>
+  <div className='sidebar-container'>
+    <div className="sidebar-brand">
+      <h2 className="sidebar-brand">Yarr</h2>
+    </div>
+  </div>
+
+let render_ = () =>
+      Observable
+        .return(view());
+
+export default render_;
+#+end_src
+
+We of course need to change our ~components/main.js~ to accomodate the new view:
+
+#+begin_src javascript
+import h from 'virtual-dom/h';
+import {Observable} from 'rx';
+
+import postsList_ from './posts-list';
+import sidebar_ from './sidebar';
+
+let view = (postsList, sidebar) =>
+      <div id='container' className='container'>
+         <div className="surface">
+           <div className="surface-container">
+             <div className="content">
+               <aside className="cover">{sidebar}</aside>
+               <div className="wrapper">
+                 <div className="wrapper-container">{postsList}</div>
+               </div>
+             </div>
+           </div>
+         </div>
+       </div>
+  ;
+
+let render_ = () => Observable.combineLatest(
+  postsList_(),
+  sidebar_(),
+  view
+);
+
+export default render_;
+#+end_src
+
+If you have a view like this: [[http://i.imgur.com/ooeGuyX.png]]
+
+then we are good to go. Let's move on to next step, and add some controls to our sidebar. It's too empty.
 
 #+begin_src bash
-git checkout 5-fetch-feeds-and-styles
+git checkout 6-sidebar-controls-and-models
 #+end_src

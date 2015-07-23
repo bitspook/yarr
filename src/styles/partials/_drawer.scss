@@ -1,0 +1,150 @@
+.drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  outline: 0;
+  background-color: $drawer-background-color;
+}
+
+.drawer-overlay {
+  display: none;
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+
+  .drawer-open & {
+    display: block;
+    left: 280px;
+    z-index: 1000;
+  }
+}
+
+.drawer-button {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  width: 45px;
+  height: 45px;
+  z-index: 1000;
+  font-size: 24px;
+  padding: 0;
+  outline: 0;
+  border: 0;
+  text-align: center;
+  vertical-align: middle;
+  background-color: $drawer-background-color;
+  color: $background-color;
+  transition: opacity .3s linear;
+
+  &:hover,
+  &:focus {
+    outline: 0;
+  }
+
+  .drawer-transition & {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  &.drawer-button-hidden {
+    @include breakpoint(small) {
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
+
+  .drawer-open & {
+    display: none;
+  }
+}
+
+.drawer-container {
+  display: none;
+  height: 100%;
+  overflow: auto;
+  overflow-scrolling: touch;
+  box-shadow: inset -1px 0 3px rgba(0, 0, 0, .3);
+  padding: 15px 0;
+
+  &::scrollbar {
+    display: none;
+  }
+
+  .drawer-transition & {
+    display: block;
+    width: 280px;
+  }
+}
+
+.drawer-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.drawer-list-divider {
+  display: block;
+  margin: 10px 20px;
+  border-top: 1px solid #0a0a0a;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04);
+  height: 8px;
+}
+
+.drawer-list-item {
+  font-family: $title-font-family;
+  font-weight: 700;
+  font-size: 11px;
+  color: $drawer-text-color;
+  line-height: 1;
+
+  &.drawer-list-title {
+    text-transform: uppercase;
+    margin: 0 20px 10px;
+    opacity: .7;
+  }
+
+  a {
+    position: relative;
+    display: block;
+    padding: 5px 20px;
+    font-family: inherit;
+    color: inherit;
+    text-decoration: none;
+    transition: color .3s;
+    -webkit-backface-visibility: hidden;
+
+    &:before {
+      content:'';
+      display: block;
+      position: absolute;
+      width: 0;
+      height: 100%;
+      left: 0;
+      top: 0;
+      background-color: $primary-color;
+      transition: width .3s;
+    }
+
+    &:focus,
+    &:hover {
+      color: $drawer-hover-color;
+      background-color: rgba(0, 0, 0, .2);
+
+      &:before {
+        width: 4px;
+      }
+    }
+
+    .fa {
+      color: $drawer-text-color;
+      vertical-align: sub;
+      text-align: left;
+      font-size: 22px;
+      width: 1.2857142857142858em; //fixed width icon
+    }
+  }
+}

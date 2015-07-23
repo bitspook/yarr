@@ -1,18 +1,29 @@
 import h from 'virtual-dom/h';
 import {Observable} from 'rx';
 
-import countClicks_ from './count-clicks';
+import postsList_ from './posts-list';
+import sidebar_ from './sidebar';
 
-let view = (countClicks) => {
-  return <div className="container">
-    {countClicks}
-  </div>;
-}
+let view = (postsList, sidebar) =>
+      <div id='container' className='container'>
+         <div className="surface">
+           <div className="surface-container">
+             <div className="content">
+               <aside className="cover">{sidebar}</aside>
+               <div className="wrapper">
+                 <div className="wrapper-container">{postsList}</div>
+               </div>
+             </div>
+           </div>
+         </div>
+       </div>
+  ;
 
-let render_ = () => Observable
-      .combineLatest(
-        countClicks_(),
-        view
-      );
+let render_ = () => Observable.combineLatest(
+  postsList_(),
+  sidebar_(),
+  view
+);
+
 
 export default render_;
