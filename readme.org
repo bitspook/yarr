@@ -1,363 +1,200 @@
-* Yarr : Fetching Feeds and Styles
-Now that we know how we are going to render our views, let's do some work on the data that we are going to render. An RSS feed reader will render: RSS Feeds.
-Create a file ~src/feeds.js~:
+* Yarr : Sidebar Controls and Models
+Our sidebar is way too empty, let's add some controls to it.
 
-#+begin_src javascript
-import {Observable} from 'rx';
-import {ajax} from 'jQuery';
+- *Post Filtering widget*
 
-let feedUrls = [
-  'https://hacks.mozilla.org/category/es6-in-depth/feed/',
-  'http://feeds.feedburner.com/JohnResig',
-  'http://unisonweb.org/feed.xml'
-];
+  Most RSS readers have ability to filter posts by "Read" and "Unread" (and "All"). Let's add that widget to our sidebar.
 
-let fetchFeed = (url) => {
-  return ajax({
-    url: `http://ajax.googleapis.com/ajax/services/feed/load?v=1.0&num=30&q=${url}`,
-    dataType: 'jsonp'
-  }).promise();
-};
+  Create a file: ~components/sidebar-filter-widget.js~
 
-let feeds_ = Observable
-      .from(feedUrls)
-      .flatMap(fetchFeed);
+  #+begin_src javascript
+  //components/sidebar-filter-widget.js
 
-export {feeds_};
-#+end_src
+  import h from 'virtual-dom/h';
+  import {Observable} from 'rx';
 
-That should not be a lot to take in one bite. We imported ~ajax~ from jquery, and created a helper method to make a request and return it as a promise. Now why are we making a request to ~http://ajax.googleapis.com/ajax/services/feed/load?v=1.0&num=30&q=${url}~ ? Turns out, not all RSS feed generators put proper ~Allow-Origin~ header on RSS feed responses, so browser rubs a Cross Origin Error in our face. Google provide this nice API which can parse the RSS feed and provide us response as JSONP. Awesome!
-
-Next we wanna create an Observable of RSS feeds. We are starting with an array of feed URLs to, so we convert it to an Observable with ~Observable.from~, and ~flatMap~ each url with ~fetchFeed~. Hmmm...what could that do?
-
-Let's quickly create a ~postsList~ component, and import our feeds in it. Follow me real quick.
-
-Delete `components/count-clicks.js` we created in previous step. And create ~components/posts-list.js~.
-
-#+begin_src javascript
-//components/posts-list.js
-import h from 'virtual-dom/h';
-import {Observable} from 'rx';
-
-import {feeds_} from '../feeds';
-
-let postView = (post) => {
-  return
-    <li>{post.title}</li>;
-}
-
-let view = (postsView) => {
-  return <ul className="posts-list">
-    {postsView}
+  let view = () =>
+    <ul className="sidebar-controls">
+      <li className="sidebar-control filter-posts data-filter-all">All</li>
+      <li className="sidebar-control filter-posts active data-filter-unread">Unread</li>
+      <li className="sidebar-control filter-posts data-filter-read">Read</li>
     </ul>
     ;
-}
 
-let render_ = () => {
-  return Observable
-    .return(view());
-}
+  let render_ = () =>
+        Observable.return(view())
 
-export default render_;
-#+end_src
+  export default render_;
+  #+end_src
 
-And our ~components/main.js~ will then be:
+  We need to update our ~components/sidebar.js~ too:
 
-#+begin_src javascript
-import h from 'virtual-dom/h';
-import {Observable} from 'rx';
+  #+begin_src javascript
+  //components/sidebar.js
+  import {Observable} from 'rx';
+  import h from 'virtual-dom/h';
 
-import postsList_ from './posts-list';
+  import filterWidget_ from './sidebar-feed-filter';
 
-let view = (postsList) => {
-  return <div className="container">
-    {postsList}
-  </div>;
-}
-
-let render_ = () => Observable
-      .combineLatest(
-        postsList_(),
-        view
-      );
-
-export default render_;
-#+end_src
-
-Our plan is to somehow use ~feeds_~ to get (blog) posts, and pass those posts to ~postView~, and generate a view for each post. Let's now play around with ~feeds_~ in ~posts-list.js~.
-
-#+begin_src javascript
-//components/posts-list.js
-.
-.
-.
-feeds_
-  .subscribe(
-    feed => {
-      console.log(feed);
-    },
-    err =>
-      console.warn('Error while getting feeds: ', err)
-  );
-
-export default render_;
-#+end_src
-
-In console we can see /jQuery response/ objects logged. In ~src/feeds.js~, we can see we made requests for each feed-url with a function ~fetchFeed~ which returns a promise. And we do so in ~flatMap~. Remember what flatMap does? It flattens the Observable, and give us its value(s). RxJS support promises and implicitly convert them to Observable for us. So we can do ~flatMap(fetchFeeds)~, and get an Observable of responses. That's great! But we want Observable of blog-posts, so let's process the responses and return blog posts instead.
-
-#+begin_src javascript
-//feeds.js
-.
-.
-.
-let feeds_ = Observable
-      .from(feedUrls)
-      .flatMap(fetchFeed)
-      .map(res => res.responseData.feed.entries);
-
-export {feeds_};
-#+end_src
-
-There we go. It'll log arrays of blog-posts in console. We can use this Observable to create our views I guess. Let's get back in ~components/posts-list.js~:
-
-#+begin_src javascript
-//components/posts-list.js
-.
-.
-.
-let render_ = () => {
-  return feeds_
-    .map(posts => posts.map(postView))
-    .map(view);
-}
-#+end_src
-
-We can now see the list of post titles on our page. But, the posts for one feed gets rendered, and then gets replaced by next feed, eventually only one feed's posts appear. Can you guess why? Well of course you can, you're smart, ain't you?
-
-We need to collect all the feeds in one big array, otherwise every time `map` runs on a feed, it'll replace the previous view. How to we convert an array to a single value? ~reduce~ you said!
-
-#+begin_src javascript
-//components/posts-list.js
-.
-.
-.
-let render_ = () => {
-  return feeds_
-    .map(posts => posts.map(postView))
-    .reduce((acc, posts) => acc.concat(posts))
-    .map(view);
-}
-#+end_src
-
-Doing this looks like solving our problem at hand, but it will actually cause some trouble in future. But we will not tackle it now. We are building an RSS reader, an RSS reader without offline useability is simply stupid imo. We we'll have offline storage, which will change the way we approach modeling our data. So let's leave the feeds like this for the moment.
-
-- *Proper Looks*
-
-Since now we have our data, let's put it in proper views. Copy the ~src/styles~ from this commit to your ~src~ folder, and add this line to your ~src/index.js~:
-
-#+begin_src javascript
-import mainView_ from './components/main';
-import render from './renderer';
-
-require('./styles/style.scss');  //new code
-
-let view_ = mainView_();
-
-render(view_, document.getElementById('app'));
-#+end_src
-
-Don't worry, I copied a lot of them from [[https://github.com/oswaldoacauan/ghostium][ghostium]] anyway.
-
-This will create ~/style.css~ file, which we shall include in ~/index.html~
-
-#+begin_src xml
-  <head>
-    <meta charset="UTF-8"/>
-    <title>Yarr : Yet Another RSS Reader</title>
-
-    <link href="styles.css" rel="stylesheet"/>
-  </head>
-#+end_src
-
-Now that we have all the styles, let's add the proper markup too:
-
-#+begin_src javascript
-//components/main.js
-import h from 'virtual-dom/h';
-import {Observable} from 'rx';
-
-import postsList_ from './posts-list';
-
-let view = (postsList) => {
-return <div id='container' className='container'>
-        <div className="surface">
-          <div className="surface-container">
-            <div className="content">
-              <div className="wrapper">
-                <div className="wrapper-container">{postsList}</div>
-              </div>
-            </div>
-          </div>
-        </div>
+  let view = (filterWidget) =>
+    <div className='sidebar-container'>
+      <div className="sidebar-brand">
+        <h2 className="sidebar-brand">Yarr</h2>
       </div>
-}
 
-let render_ = () => Observable.combineLatest(
-    postsList_(),
-    view
-);
-
-
-export default render_;
-#+end_src
-
-And ~posts-list.js~
-#+begin_src javascript
-//components/posts-list.js
-import h from 'virtual-dom/h';
-import {Observable} from 'rx';
-
-import {feeds_} from '../feeds';
-import {formatDate} from '../utils';
-
-let postView = (post) =>
-    <article className="post-item post">
-      <header className="post-item-header">
-        <h2 className="post-item-title">
-          <a className='post-title' href={post.link}>{post.title}</a>
-          </h2>
-      </header>
-      <section className="post-item-excerpt">
-        {post.contentSnippet}
-      </section>
-
-      <footer className="post-item-footer">
-        <ul className="post-item-meta-list">
-          <li className="post-item-meta-item">
-            <p><a href={post.link}>{post.author}</a>
-            </p>
-          </li>
-
-          <li className="post-item-meta-item">
-            <p>
-              {formatDate(post.publishedDate)}
-            </p>
-          </li>
-
-          <li className="post-item-meta-item">
-            <p itemprop="articleSection">{post.categories.join(', ')}</p>
-          </li>
-        </ul>
-      </footer>
-    </article>
+      {filterWidget}
+    </div>
   ;
 
 
-let view = (postViews) =>
-  <section className="post-list">
-    {postViews}
-  </section>;
+  let render_ = () =>
+    Observable
+    .combineLatest(
+      filterWidget_(),
+      view
+    );
+
+  export default render_;
+  #+end_src
+
+  *Interactivity in feed filter widget*
+
+  Let's add some interactivity to our widget. We wanna switch the ~active~ class to the appropriate button on click.
+
+  #+begin_src javascript
+  //components/sidebar-filter-widget.js
+  import h from 'virtual-dom/h';
+  import {Observable} from 'rx';
+
+  import {clicksByClass_} from '../events';
+
+  let view = () =>
+    <ul className="sidebar-controls">
+      <li className="sidebar-control filter-posts data-filter-all">All</li>
+      <li className="sidebar-control filter-posts active data-filter-unread">Unread</li>
+      <li className="sidebar-control filter-posts data-filter-read">Read</li>
+    </ul>
+    ;
+
+  let render_ = () => {
+    let widgetClicks_ = clicksByClass_('filter-posts');
+
+    widgetClicks_
+      .map(e => e.target)
+      .do(el => {
+        document.querySelector('.filter-posts.active').classList.remove('active');
+        el.classList.add('active');
+      })
+      .subscribe(e => console.log(e));
+
+    return Observable.return(view());
+  }
 
 
+  export default render_;
+  #+end_src
 
-let render_ = () => {
-  return feeds_
-    .map(posts => posts.map(postView))
-    .reduce((acc, posts) => acc.concat(posts))
-    .map(view);
-}
+  We get the clicks Observable with ridiculously simple eventing system we setup earlier, and switch classes on the target element. Not we're not using jQuery for switching classes, because of which our code may not work on some older browsers. But you know what? Fuck it. We don't want to support older browsers, not in our play time at least.
 
-export default render_;
-#+end_src
+- *Fetch Feeds and Add Feed widget*
 
-Note that we're importing ~formatDate~ from ~utils.js~. Let's add that too.
+  Let's add another widget, we might want to fetch our feeds at later time right? And we of course want to add new feeds.
 
-#+begin_src javascript
-//src/utils.js
-export default {
-  toArray: (arrayLike) => Array.prototype.slice.call(arrayLike, 0),
-  formatDate: (date) => {
-    if(!date) return '';
+  Create a file: ~components/sidebar-fetch-n-add-widget.js~
 
-    if(typeof date === 'string')
-      date = new Date(date);
+  #+begin_src javascript
+  //components/sidebar-fetch-n-add-widget.js
+  import h from 'virtual-dom/h';
+  import {Observable} from 'rx';
 
-    let monthNames = [
-      'January', 'February', 'March',
-      'April', 'May', 'June', 'July',
-      'August', 'September', 'October',
-      'November', 'December'
-    ];
+  let view = () =>
+    <ul className="sidebar-controls">
+      <li className="sidebar-control fetch-all-btn">Fetch All Feeds</li>
 
-    let day = date.getDate(),
-        monthIndex = date.getMonth(),
-        year = date.getFullYear();
+      <li className="sidebar-control new-feed-btn">Add New Feed
+        <input className="new-feed-input" type="url" required />
+      </li>
+    </ul>
+    ;
 
-    return `${day}, ${monthNames[monthIndex]}, ${year}`;
-  },
-}
-#+end_src
-
-View is much better now, isn't it? Go eat some candies if you said no.
-
-You would've noticed there's room for a sidebar there. Let's add the sidebar real quick. Create ~components/sidebar.js~
-
-#+begin_src javascript
-import {Observable} from 'rx';
-import h from 'virtual-dom/h';
-
-let view = () =>
-  <div className='sidebar-container'>
-    <div className="sidebar-brand">
-      <h2 className="sidebar-brand">Yarr</h2>
-    </div>
-  </div>
-
-
-let render_ = () =>
-      Observable
+  let render_ = () =>
+        Observable
         .return(view());
 
-export default render_;
-#+end_src
+  export default render_;
+  #+end_src
 
-We of course need to change our ~components/main.js~ to accomodate the new view:
+  We also need to update ~components/sidebar.js~:
 
-#+begin_src javascript
-import h from 'virtual-dom/h';
-import {Observable} from 'rx';
+  #+begin_src javascript
+  //components/sidebar.js
+  import {Observable} from 'rx';
+  import h from 'virtual-dom/h';
 
-import postsList_ from './posts-list';
-import sidebar_ from './sidebar';
+  import filterWidget_ from './sidebar-feed-filter';
+  import fetchNAddWidget_ from './sidebar-fetch-n-add-widget';
 
-let view = (postsList, sidebar) =>
-      <div id='container' className='container'>
-         <div className="surface">
-           <div className="surface-container">
-             <div className="content">
-               <aside className="cover">{sidebar}</aside>
-               <div className="wrapper">
-                 <div className="wrapper-container">{postsList}</div>
-               </div>
-             </div>
-           </div>
-         </div>
-       </div>
-  ;
+  let view = (filterWidget, fetchNAddWidget) =>
+    <div className='sidebar-container'>
+      <div className="sidebar-brand">
+        <h2 className="sidebar-brand">Yarr</h2>
+      </div>
 
-let render_ = () => Observable.combineLatest(
-  postsList_(),
-  sidebar_(),
-  view
-);
+      {filterWidget}
+      {fetchNAddWidget}
 
-export default render_;
-#+end_src
+    </div>
 
-If you have a view like this: [[http://i.imgur.com/ooeGuyX.png]]
 
-then we are good to go. Let's move on to next step, and add some controls to our sidebar. It's too empty.
+  let render_ = () =>
+    Observable
+    .combineLatest(
+      filterWidget_(),
+      fetchNAddWidget_(),
+      view
+    );
 
-#+begin_src bash
-git checkout 6-sidebar-controls-and-models
-#+end_src
+  export default render_;
+  #+end_src
+
+  *Interactivity*
+
+  Notice that we have an ~<input>~ field for adding a feed, but it has ~display: hidden~. We want to toggle it when we click ~Add New Feed~ button.
+
+  #+begin_src javascript
+  import h from 'virtual-dom/h';
+  import {Observable} from 'rx';
+
+  import {clicksByClass_} from '../events';
+
+  let view = (addFeedInputStyles) =>
+    <ul className="sidebar-controls">
+      <li className="sidebar-control fetch-all-btn">Fetch All Feeds</li>
+
+      <li className="sidebar-control new-feed-btn">Add New Feed
+        <input className="new-feed-input" style={addFeedInputStyles} type="url" required />
+      </li>
+    </ul>
+    ;
+
+  let render_ = () => {
+    let addFeedBtnClicks_ = clicksByClass_('new-feed-btn');
+
+    let addFeedInputStyles_ = addFeedBtnClicks_
+          .startWith(false)
+          .scan(acc => !acc)
+          .map(show => show
+               ? {display: 'inline-block'}
+               : {display: 'none' });
+
+    return Observable
+      .combineLatest(
+        addFeedInputStyles_,
+        view
+      );
+  }
+
+  export default render_;
+  #+end_src
+
+  We could have simply toggled a class on our ~<input>~ field, but this is another way I wanted to demonstrate. Instead of toggeling classes in side-effect code, we can do it in more pure way like this. We create an Observable for inline-styles of the input block, and create an Observable which emits ~{display: 'none'}~ or ~{display: 'inline-block'}~ alternatively when user clicks the `Add New Feed` button. ~scan~ is similar to ~reduce~, Google it.
