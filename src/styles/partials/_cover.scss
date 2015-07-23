@@ -1,0 +1,173 @@
+.cover {
+  position: relative;
+  top: 0;
+  left: 0;
+  width: 30%;
+  height: 100%;
+  z-index: 100;
+  overflow: scroll;
+
+  @include breakpoint(medium) {
+    width: 100%;
+    height: 30%;
+    min-height: 300px;
+  }
+}
+
+.cover-image {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.3);
+  background-color: $drawer-background-color;
+}
+
+.cover-container {
+  position: absolute;
+  bottom: 0;
+  padding: 50px 10% 10%;
+  width: 100%;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+
+  @include breakpoint(medium) {
+    text-align: center;
+    padding: 0 15px;
+  }
+}
+
+.cover-logo {
+  img {
+    border: 3px solid #fff;
+    border-radius: 50%;
+    border-radius: 50%;
+    max-height: 100px;
+    transition: opacity .3s ease-in-out;
+    box-shadow:
+    0 0 3px 3px rgba(0, 0, 0, 0.3),
+    inset 0 0 40px 2px rgba(0, 0, 0, 0.3);
+    backface-visibility: hidden;
+  }
+
+  &:hover,
+  &:focus {
+    img {
+      opacity: .85;
+    }
+  }
+}
+
+.cover-title {
+  font-size: 32px;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+
+.cover-description {
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.sidebar-container {
+  padding: 20px;
+  font-family: "Open Sans", "Myriad Pro", "Lucida Grande", "Lucida Sans Unicode", "Lucida Sans", Geneva, Verdana, sans-serif;
+  text-align: center;
+}
+
+.sidebar-brand {
+  padding: 40px;
+  font-size: 1.6em;
+}
+
+.sidebar-feedlist {
+  list-style-type: none;
+  margin: 0 auto;
+  width: 18em;
+  /* padding-left: 3em; */
+  text-align: left;
+  font-size: 17px;
+  text-overflow: clip;
+
+  @include breakpoint(medium) {
+    display: none;
+    visibility: hidden;
+  }
+  @include breakpoint(small) {
+    display: none;
+    visibility: hidden;
+  }
+}
+
+.sidebar-feedlist-item {
+  padding: 0.2em 0;
+}
+
+.count-badge {
+  font-size: 14px;
+  font-style: normal;
+  padding: 5px;
+  background: rgba( 122, 122, 122, 0.2);
+  border-radius: 10px;
+  vertical-align: middle;
+  margin: 5px;
+  width: 10%;
+}
+
+.sidebar-feed {
+  text-decoration: none;
+  display: inline-block;
+  width: 100%;
+  text-overflow: ellipsis;
+}
+
+.sidebar-controls {
+  list-style-type: none;
+  margin: 0;
+  margin-bottom: 3em;
+  padding: 0px;
+  font-size: 14px;
+}
+
+.sidebar-control {
+  position: relative;
+  display: inline-block;
+  padding: 1em 2em;
+  transition: all cubic-bezier(.2, .3, .25, .9) .2s, opacity .3s;
+  text-align: center;
+  border: 1px solid #f2f2f2;
+
+&:hover {
+    cursor: pointer;
+    color: $primary-color;
+  }
+  &:active {
+    background: darken(#f2f2f2, 2);
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+  }
+}
+.sidebar-control.active {
+  background: darken(#f4f4f4, 2);
+}
+
+.new-feed-input {
+  position: absolute;
+  top: 4em;
+  left: -11.5em;
+  width: 22.5em;
+  padding: 0.8em 1em;
+  display: none;
+  transition: all 0.5s ease;
+}
+
+.error {
+  border: 2px solid red;
+  color: red;
+}
+
+.sidebar-feed.active {
+  color: $primary-color;
+}
