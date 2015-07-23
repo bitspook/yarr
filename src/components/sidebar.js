@@ -3,8 +3,9 @@ import h from 'virtual-dom/h';
 
 import filterWidget_ from './sidebar-feed-filter';
 import fetchNAddWidget_ from './sidebar-fetch-n-add-widget';
+import feedList_ from './sidebar-feed-list';
 
-let view = (filterWidget, fetchNAddWidget) =>
+let view = (filterWidget, fetchNAddWidget, feedList) =>
   <div className='sidebar-container'>
     <div className="sidebar-brand">
       <h2 className="sidebar-brand">Yarr</h2>
@@ -12,7 +13,7 @@ let view = (filterWidget, fetchNAddWidget) =>
 
     {filterWidget}
     {fetchNAddWidget}
-
+    {feedList}
   </div>
 
 
@@ -21,6 +22,7 @@ let render_ = () =>
   .combineLatest(
     filterWidget_(),
     fetchNAddWidget_(),
+    feedList_(),
     view
   );
 
