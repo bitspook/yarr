@@ -1,7 +1,7 @@
 import h from 'virtual-dom/h';
 import {Observable} from 'rx';
 
-import {feeds_} from '../feeds';
+import {posts_} from '../models/posts';
 import {formatDate} from '../utils';
 
 let postView = (post) =>
@@ -45,7 +45,7 @@ let view = (postViews) =>
 
 
 let render_ = () => {
-  return feeds_
+  return posts_
     .map(posts => posts.map(postView))
     .reduce((acc, posts) => acc.concat(posts))
     .map(view);
