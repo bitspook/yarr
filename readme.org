@@ -1,442 +1,211 @@
-* Yarr : Renderer
-It's about time we start with building our RSS reader.
-Now we're not going to use any JS frameworks for writing our app, but that doesn't mean we can't take "inspiration" from frameworks. Other than using virtual-dom, one awesome idea React has made obvious is writing UI in terms of components. Isolation is the key to reuseability, scalability, maintainability, and god-knows-what-bilities. We'll try to build our UI in terms of isolated components.
+* Yarr : Delegated Events
 
-Using virtual DOM makes it pretty natural actually. Virtual-DOM has these requirements:
+We have our pretty components system set up, but what about events? Users will be interacting with our app, right?
+Since we're taking so much "inspiration" from React, how do React handle events? Really? You want to get into those "onClick" stuff? I mean they are pretty, I've nothing against them, but given a choice I won't really vouch for them either. That said, I don't want to get into "when a component is ready and when it's re-rendered" events either.
 
-- It needs complete view every time we have to make any update in DOM
-- All our virtual-dom must have a single parent, one `rootNode`. Like it must have a container element on top of the markup tree
+Another hint, Observable are good at chaining operations (dead give away, *filter*). What if we use delegated events? Like put an event listener on ~document.body~, and filter for the target we want? Let's try this. Let's create a counting button component (and remove other components from our previous step).
 
-Now let's forget all the component bullshit for a moment and try to make our counter from last step more elegant. Here's the code from last step:
-
-#+begin_src javascript
-import {Observable} from 'rx';
-
-import {h} from 'virtual-dom';
-import createElement from 'virtual-dom/create-element';
-import diff from 'virtual-dom/diff';
-import patch from 'virtual-dom/patch';
-
-
-let render = (count) => <h1 className='hello-world'>Hello World {count + ''}</h1>;
-
-let view = render(0);
-let rootNode = createElement(view);
-document.body.appendChild(rootNode);
-
-Observable
-  .interval(1000)
-  .map(n => render(n + 1))
-  .subscribe(
-    newView => {
-      let patches = diff(view, newView);
-      rootNode = patch(rootNode, patches);
-      view = newView;
-    }
-  );
-#+end_src
-
-- *Be more classy*
-
-We are rendering our vDOM under `document.body`. Let's be little more classy and create a dedicated dumping ground in our html. Make ~<body>~ in `index.html` look like this:
-
-#+begin_src xml
-<body class="home-template">
-  <span id="app"></span> <!-- new code -->
-
-  <script src="dist/app.js"></script>
-</body>
-#+end_src
-
-Now we can use ~span#app~ for rendering the output. It's not really a hard requirement to do it this way, we can get away with putting our vDOM output in document.body too.
-
-#+begin_src javascript
-.
-.
-.
-let rootNode = createElement(view);
-
-let baseDOMNode = document.getElementById('app');
-baseDOMNode.appendChild(rootNode);
-
-Observable
-.
-.
-.
-#+end_src
-
-- *Divide views in Components*
-
-If we look at our code now, ~render~ method provide us our *complete view* as hyperscript, and ~count~ is our state. I think that's a dead give-away for how we can have isolated components.
-
-Let's divide our view into two components: greeating and counter. Create ~/src/components~ directory, and create two files ~components/greeting.js~ and ~components/counter.js~.
-
-#+begin_src javascript
-//components/greeting.js
-import h from 'virtual-dom/h';
-
-let render = () => <h1>Hello World</h1>
-
-export default render;
-#+end_src
-
-#+begin_src javascript
-//components/counter.js
-import h from 'virtual-dom/h';
-
-let render = (count) => <h1>{count}</h1>;
-
-export default render;
-#+end_src
-
-~export default XXX~ is an ES6 construct which gives XXX to the importer of the module with whatever name importer want it with. So we can do ~import greeting from "./components/greeting";~ and get the `render` method from `components/greeting` module as `greeting`.
-
-Let's change our `index.js` file to use our new components:
-
-#+begin_src javascript
-//index.js
-
-import {Observable} from 'rx';
-
-import {h} from 'virtual-dom';
-import createElement from 'virtual-dom/create-element';
-import diff from 'virtual-dom/diff';
-import patch from 'virtual-dom/patch';
-
-import greeting from './components/greeting';
-import counter from './components/counter';
-
-let render = (count) => {
-  count += '';
-  return <div className="container">
-    {greeting()}
-    {counter(count)}
-  </div>;
-}
-
-let view = render(0);
-let rootNode = createElement(view);
-
-let baseDOMNode = document.getElementById('app');
-baseDOMNode.appendChild(rootNode);
-
-Observable
-  .interval(1000) //replace the steTimeout and `count` state variable. Interval will give us an increment-ing number every 1000 milliseconds
-  .map(n => render(n + 1))
-  .subscribe(
-    newView => {
-      let patches = diff(view, newView);
-      rootNode = patch(rootNode, patches);
-      view = newView;
-    }
-  );
-#+end_src
-
-- *Mother of all Components*
-
-We had to change our render method to have a container HTML tag (requirement #2 of vDOM, remember?). So we need to have a container, hmmm. Why not create something like a root or main component, which imports all components and provide a single markup tree? Let's just do it. Create ~components/main.js~:
-
-#+begin_src javascript
-//components/main.js
-
-import h from 'virtual-dom/h';
-
-import greeting from './greeting';
-import counter from './counter';
-
-let render = (count) => {
-  count += '';
-  return <div className="container">
-    {greeting()}
-    {counter(count)}
-  </div>;
-}
-
-export default render;
-#+end_src
-
-Our ~index.js~ looks somewhat like this now:
-
-#+begin_src javascript
-import {Observable} from 'rx';
-
-import {h} from 'virtual-dom';
-import createElement from 'virtual-dom/create-element';
-import diff from 'virtual-dom/diff';
-import patch from 'virtual-dom/patch';
-
-import mainView from './components/main';
-
-let view = mainView(0);
-let rootNode = createElement(view);
-
-let baseDOMNode = document.getElementById('app');
-baseDOMNode.appendChild(rootNode);
-
-Observable
-  .interval(1000) //replace the steTimeout and `count` state variable. Interval will give us an increment-ing number every 1000 milliseconds
-  .map(n => mainView(n + 1))
-  .subscribe(
-    newView => {
-      let patches = diff(view, newView);
-      rootNode = patch(rootNode, patches);
-      view = newView;
-    }
-  );
-#+end_src
-
-- *Separation of concerns* and *Propagation of change*
-
-Now this is called separation of concerns. Or is this? We are passing ~count~ to ~newView~, `count` however, is something which should be internal to `counter` component, outer views don't need to know about it.
-But if we move `count` to inside the `counter` component, how will it tell the main view that it needs to be updated? And how will the main view tell our index.js that it should be re-rendered? This propagation of change can be major pain in the ass /cough/ $digest loop /cough/
-
-What are we using RxJS for? Among many things, Observable are reactive. Then can push data to their user/owner/whatever. We can make `counter` component return an Observable of hyperscript (the HTMLish syntax) instead of just returning a single hyperscript value. Let's change the `counter` component and make it take care of its internal state.
-
-#+begin_src javascript
-//components/counter.js
-import {Observable} from 'rx';
-import h from 'virtual-dom/h';
-
-let render_ = () => Observable
-      .interval(1000)
-      .map(count => count.toString())
-      .map(count => <span>{count}</span>);
-
-export default render_;
-
-#+end_src
-
-We need to change our ~components/main.js~ to use `counter_` as an Observable. Now to get a value out of an Observable, we have to subscribe to it (or operate on it). We don't want to subscribe to our counter_ observable right now (because that will end the chain, remember? ~Observable.prototype.subscribe~ is where it all ends). We want to pass this along to our ~index.js~ file which will finally subscribe to it and render it to our page. So we need to convert our main view to an Observable too, which will use the `counter_` Observable, and return an Observable of the complete view.
-
-#+begin_src javascript
-//components/main.js
-import h from 'virtual-dom/h';
-
-import greeting from './greeting';
-import counter_ from './counter';
-
-let view = (counterView) => {
-  return <div className="container">
-    {greeting()}
-    {counterView}
-  </div>;
-}
-
-let render_ = () => counter_()
-      .map(view);
-
-export default render_;
-#+end_src
-
-And finally, we need to change our index.js to make use of our mainView_.
-
-#+begin_src javascript
-import {Observable} from 'rx';
-
-import {h} from 'virtual-dom';
-import createElement from 'virtual-dom/create-element';
-import diff from 'virtual-dom/diff';
-import patch from 'virtual-dom/patch';
-
-import mainView_ from './components/main';
-
-let view = null;
-let rootNode = null;
-
-mainView_()
-  .subscribe(
-    newView => {
-      if (!view) {
-        view = newView;
-        rootNode = createElement(view);
-        let baseDOMNode = document.getElementById('app');
-        return baseDOMNode.appendChild(rootNode);
-      }
-
-      let patches = diff(view, newView);
-      rootNode = patch(rootNode, patches);
-      view = newView;
-    }
-  );
-#+end_src
-
-- *Observable.prototype.startWith*?
-
-If we look at our app now, we'll see that it stays blank for a moment, and then it renders everything and counter starts. Why's that? It should render immediately. Is it a performance problem?
-
-Hell no. Let's find the issue. Take look at our chain of Observable, where do it start? In the `counter` component, remember? `counter` uses ~Observable.interval~ as its source, so may be that's what holds the rendering for that one initial second. Let's experiment, and change the interval to `5000` and see if that increases the rendering delay. It does!
-
-Pheww, we caught the issue at least. We want our Observable to start immediately, with a default. Remember the operator for this? `startWith`. Let's change our `counter` component to use `startWith`:
-
-#+begin_src javascript
-import {Observable} from 'rx';
-import h from 'virtual-dom/h';
-
-let render_ = () => Observable
-      .interval(1000)
-      .map(n => n+1)
-      .startWith(0)
-      .map(count => count.toString())
-      .map(count => <span>{count}</span>);
-
-export default render_;
-#+end_src
-
-That solved our delay in rendering. Yay! Notice we added ~map(n => n+1)~, that's because we already provided `0` manually.
-
-The takeaway from this issue is that if we ever see nothing rendering on the screen, or the whole view rendering little late, it's very likely an Observable that needs to startWith a default.
-
-- *Consistent System = Maintainable System*
-
-  Notice each of our component returns a function. Why's that? So that we can pass the initial state to our component if it needs any. But even though our components don't need initial state, they're still returning a function. Well, that's to keep our system consistent. Consistency is key to maintainability.
-
-  Consistency reminds us, what a bunch of hypocrites we are! Our components return a function which returns an Observable of views (hyperscript), but look at the `greeting` component. It doesn't! We shall respect the moral code and make it consistent. Let's convert it to return an Observable.
-
-  #+begin_src javascript
-  //components/greeting.js
-  import h from 'virtual-dom/h';
-  import {Observable} from 'rx';
-
-  let render_ = () => Observable.return(<h1>Hello World</h1>);
-
-  export default render_;
-  #+end_src
-
-  ~Observable.return~ creates an Observable which only returns one value that we pass it. Now we need to modify `components/main.js` too.
-
-  #+begin_src javascript
-    import h from 'virtual-dom/h';
-    import {Observable} from 'rx';
-
-    import greeting_ from './greeting';
-    import counter_ from './counter';
-
-    let view = (counterView, greetingView) => {
-      return
-      <div className="container">
-        {greetingView}
-        {counterView}
-      </div>;
-    }
-
-    let render_ = () => Observable
-          .combineLatest(
-            counter_(),
-            greeting_(),
-            view
-          );
-
-    export default render_;
-  #+end_src
-
-  Remember the ~Observable.combineLatest~? I hope you do.
-
-  We need to recreate the whole view on every change, so we need to combine all the parts (i.e components) every time we need to update something in the DOM. That is what the `view` method in `main.js` do (combine the components that is). ~Observable.combineLatest~ will run the ~view~ function every time any of the participant Observable (counter_ and greeting_) emit a value, and it does so with the new value from the Observable which emitted one, and the last value of the other Observable. So we get caching (or memoizing) for free! The only condition is that each of the participant Observable must emit at least once (for that we'll use `Observable.startWith` whenever required).
-
-  So, we have a way to make isolated, consistent components! I think it's not bad for a system with so little layers of abstraction.
-
-- *Clean up index.js*
-
-  Let's clean up the index.js to turn our vDOM rendering more re-useable. Turn the *Renderer* to a class perhaps? Or a closure may be?
-
-  #+begin_src javascript
-  //index.js
-  import {Observable} from 'rx';
-
-  import {h} from 'virtual-dom';
-  import createElement from 'virtual-dom/create-element';
-  import diff from 'virtual-dom/diff';
-  import patch from 'virtual-dom/patch';
-
-  import mainView_ from './components/main';
-
-  let baseDOMNode = document.getElementById('app');
-
-  let render = (mainView_, baseDOMNode) => {
-    let view = null;
-    let rootNode = null;
-
-    let initialize = (newView) => {
-      view = newView;
-      rootNode = createElement(view);
-      baseDOMNode.appendChild(rootNode);
-    };
-
-    let update = (newView) => {
-      let patches = diff(view, newView);
-      rootNode = patch(rootNode, patches);
-      view = newView;
-    };
-
-    return mainView_
-      .subscribe(
-        newView => view
-          ? update(newView)
-          : initialize(newView),
-        error => console.warn('Error occured somewhere along Observable chain', error)
-      );
-  };
-
-  let view_ = mainView_();
-  render(view_, baseDOMNode);
-  #+end_src
-
-  Let's separate the concerns even further and move vDOM renderer to its own file. We wanna keep our index.js file as clean as we can. Create a file ~src/renderer.js~:
-
-  #+begin_src javascript
-  //renderer.js
-  import {h} from 'virtual-dom';
-  import createElement from 'virtual-dom/create-element';
-  import diff from 'virtual-dom/diff';
-  import patch from 'virtual-dom/patch';
-
-
-  let render = (mainView_, baseDOMNode) => {
-    let view = null;
-    let rootNode = null;
-
-    let initialize = (newView) => {
-      view = newView;
-      rootNode = createElement(view);
-      baseDOMNode.appendChild(rootNode);
-    };
-
-    let update = (newView) => {
-      let patches = diff(view, newView);
-      rootNode = patch(rootNode, patches);
-      view = newView;
-    };
-
-    return mainView_
-      .subscribe(
-        newView => view
-          ? update(newView)
-          : initialize(newView),
-        error => console.warn('Error occured somewhere along Observable chain', error)
-      );
-  };
-
-  export default render;
-  #+end_src
-
-  And then we can change our `index.js` to this:
-
-  #+begin_src javascript
-  //index.js
-  import mainView_ from './components/main';
-  import render from './renderer';
-
-  let view_ = mainView_();
-
-  render(view_, document.getElementById('app'));
-  #+end_src
-
-  Now that's what we call a clean main file ^_^
-
-  I hope you're not losing yourself already. Pat yourself on the back, you made through the toughest part of this tutorial. Everything will be a breeze from here on, promise.
-
-Now that we have somewhat saner way to write good (consistent, isolated components), we can move on to another important aspect of a web-app: events.
+Our project shall look like this atm:
 
 #+begin_src bash
-git checkout 4-delegated-events
+.
+├── index.html
+├── package.json
+├── src
+│   ├── components
+│   │   └── main.js
+│   ├── index.js
+│   └── renderer.js
+└── webpack.config.js
+#+end_src
+
+Also wipe-up the `components/main.js`.
+
+- *Count clicks Component*
+
+Let's create a new component which will count the clicks we made to a button.
+
+#+begin_src javascript
+//components/count-clicks.js
+import h from 'virtual-dom/h';
+import {Observable} from 'rx';
+
+let view = (count) =>
+  <div className="count-clicks">
+    <button className="count-clicks-btn">Click me!</button>
+    <span style="font-size: 20px;">{count}</span>
+  </div>
+
+let render_ = () => {
+  let count = 0;
+
+  return Observable.
+    return(view(count + ''));
+}
+
+export default render_;
+#+end_src
+
+And our ~components/main.js~ will be:
+
+#+begin_src javascript
+import h from 'virtual-dom/h';
+import {Observable} from 'rx';
+
+import countClicks_ from './count-clicks';
+
+let view = (countClicks) => {
+  return <div className="container">
+    {countClicks}
+  </div>;
+}
+
+let render_ = () => Observable
+      .combineLatest(
+        countClicks_(),
+        view
+      );
+
+export default render_;
+#+end_src
+
+Great! Now we want to listen to click events on our ~.count-clicks-btn~. Virtual-DOM/React way of doing that is to provide a `onClick` handler in properties, but we don't want to do that. We want to use delegated events instead. Let's do that.
+
+Create ~./src/events.js~ file. We'll host our source events code there, and make the events pass through a chain of Observable operators to get only the events we need.
+
+#+begin_src javascript
+//src/events.js
+import {Observable} from 'rx';
+
+let body = document.body;
+
+let clicks_ = Observable.fromEvent(body, 'click');
+
+let toArray = (arrayLike) => Array.prototype.slice.call(arrayLike, 0);
+
+let countBtnClicks_ = clicks_
+      .filter(e => {
+        let classes = toArray(e.target.classList);
+
+        return classes.indexOf('count-clicks-btn') >= 0;
+      });
+
+
+export {countBtnClicks_};
+#+end_src
+
+We have put a `click` event listener on body, and then we're filtering it by class name to get clicks only for our button. Let's import these events to our `countClicks` component and check by subscribing to it.
+
+#+begin_src javascript
+//components/count-clicks.js
+.
+.
+.
+import {countBtnClicks_} from '../events';
+countBtnClicks_
+  .subscribe(x => console.log(x));
+#+end_src
+
+Voilla! it's working. We'll use this system of delegated events in our app. Let's make `events.js` code more re-useable.
+
+#+begin_src javascript
+//events.js
+import {Observable} from 'rx';
+
+import {toArray} from './utils';
+
+
+let body = document.body;
+
+let clicks_ = Observable.fromEvent(body, 'click');
+
+
+let clicksByClass_ = (className) => clicks_
+      .filter(e => {
+        let classes = toArray(e.target.classList);
+
+        return classes.indexOf(className) >= 0;
+      });
+
+
+export {clicksByClass_};
+#+end_src
+
+#+begin_src javascript
+//components/count-clicks.js
+import h from 'virtual-dom/h';
+import {Observable} from 'rx';
+
+import {clicksByClass_} from '../events';
+
+let view = (count) =>
+    <div className="count-clicks">
+      <button className="count-clicks-btn">Click me!</button>
+      <span> {count}</span>
+    </div>;
+
+let render_ = () => {
+  let count = 0;
+
+  return Observable.
+    return(view(count + ''));
+}
+
+clicksByClass_('count-clicks-btn')
+  .subscribe(x => console.log(x));
+
+export default render_;
+#+end_src
+
+And create a `src/utils.js` to keep small utility methods:
+
+#+begin_src javascript
+//src/utils.js
+export default {
+  toArray: (arrayLike) => Array.prototype.slice.call(arrayLike, 0)
+}
+#+end_src
+
+Now that we have clicks as an Observable, we can use them to produce our `countClicks` component's view:
+
+#+begin_src javascript
+//components/count-clicks.js
+import h from 'virtual-dom/h';
+import {Observable} from 'rx';
+
+import {clicksByClass_} from '../events';
+
+let view = (count) =>
+    <div className="count-clicks">
+      <button className="count-clicks-btn">Click me!</button>
+      <span> {count}</span>
+    </div>;
+
+let render_ = () => {
+  let count = 0;
+
+  let countBtnClicks_ = clicksByClass_('count-clicks-btn');
+
+  return countBtnClicks_
+    .map(e => ++count)
+    .startWith(0) //nothing will get rendered if we take this away
+    .map(n => n.toString())
+    .map(view);
+}
+
+export default render_;
+#+end_src
+
+Our app is working! What kind of sorcery is this?
+
+Honestly, if you were paying attention this won't look like sorcery at all. ~countBtnCicks_~ gives us a notification (in form of event) every time user clicks our button, we convert that to an incrementing count. Next is ~startWith(0)~, remember why we need it? Without startWith, our renderer will keep waiting for countBtnClicks_ to emit at least once (because we use `combineLatest` to combine all views), and countBtnClicks_ will emit only if user clicks on the button. But there is no button rendered yet! To get out of this loop, we start it with an initial value.
+
+Great! With that out of the way, we have our component system and events system in place, we can finally start building our app. Lol, I lied to you like 2 steps back that we're building Yarr back then. Can't believe you fell for that you dumb fuck.
+
+Just kidding, I don't really think you are a dumb fuck. Dumb fucks are cool.
+
+Let's move to next step then.
+
+#+begin_src bash
+git checkout 5-fetch-feeds-and-styles
 #+end_src
