@@ -1,369 +1,107 @@
-* Yarr : Sidebar Controls and Models
-Our sidebar is way too empty, let's add some controls to it.
+* Yarr : Offline Storage with Dexie.js
+It's time we implement offline storage. We're going to use IndexedDB for storage, but not directly. We'll use an abstraction over IndexedDB called dexie.js.
+We'll put all our database related code in ~/src/db.js~, so create that file.
 
-** Sidebar Widgets
+** Hello Dexie
+Dexie's interface is somewhat similar to that of a SQL database. If you've used one before, you'll feel almost at home.
 
-- *Post Filtering widget*
+- *Create a Store*
 
-  Most RSS readers have ability to filter posts by "Read" and "Unread" (and "All"). Let's add that widget to our sidebar.
-
-  Create a file: ~components/sidebar-filter-widget.js~
-
-  #+begin_src javascript
-  //components/sidebar-filter-widget.js
-
-  import h from 'virtual-dom/h';
-  import {Observable} from 'rx';
-
-  let view = () =>
-    <ul className="sidebar-controls">
-      <li className="sidebar-control filter-posts data-filter-all">All</li>
-      <li className="sidebar-control filter-posts active data-filter-unread">Unread</li>
-      <li className="sidebar-control filter-posts data-filter-read">Read</li>
-    </ul>
-    ;
-
-  let render_ = () =>
-        Observable.return(view())
-
-  export default render_;
-  #+end_src
-
-  We need to update our ~components/sidebar.js~ too:
+  First we need to create a store in dexie. It's like creating a database in which we'll then create tables for ~feeds~ and ~posts~.
 
   #+begin_src javascript
-  //components/sidebar.js
-  import {Observable} from 'rx';
-  import h from 'virtual-dom/h';
+  //db.js
+  import Dexie from 'dexie';
 
-  import filterWidget_ from './sidebar-feed-filter';
-
-  let view = (filterWidget) =>
-    <div className='sidebar-container'>
-      <div className="sidebar-brand">
-        <h2 className="sidebar-brand">Yarr</h2>
-      </div>
-
-      {filterWidget}
-    </div>
-  ;
-
-
-  let render_ = () =>
-    Observable
-    .combineLatest(
-      filterWidget_(),
-      view
-    );
-
-  export default render_;
+  let db = new Dexie('yarr');
   #+end_src
 
-  *Interactivity in feed filter widget*
+- *Create Tables*
 
-  Let's add some interactivity to our widget. We wanna switch the ~active~ class to the appropriate button on click.
+  Next step, to create tables:
 
   #+begin_src javascript
-  //components/sidebar-filter-widget.js
-  import h from 'virtual-dom/h';
-  import {Observable} from 'rx';
-
-  import {clicksByClass_} from '../events';
-
-  let view = () =>
-    <ul className="sidebar-controls">
-      <li className="sidebar-control filter-posts data-filter-all">All</li>
-      <li className="sidebar-control filter-posts active data-filter-unread">Unread</li>
-      <li className="sidebar-control filter-posts data-filter-read">Read</li>
-    </ul>
-    ;
-
-  let render_ = () => {
-    let widgetClicks_ = clicksByClass_('filter-posts');
-
-    widgetClicks_
-      .map(e => e.target)
-      .do(el => {
-        document.querySelector('.filter-posts.active').classList.remove('active');
-        el.classList.add('active');
-      })
-      .subscribe(e => console.log(e));
-
-    return Observable.return(view());
-  }
-
-
-  export default render_;
+  //The object store will allow any properties on your stored objects but you can only query them by indexed properties
+  db.version(1).stores({
+    feeds: 'url, name',
+    posts: 'link, title, author, publishedDate, categories, read, feedUrl'
+  });
   #+end_src
 
-  We get the clicks Observable with ridiculously simple eventing system we setup earlier, and switch classes on the target element. Not we're not using jQuery for switching classes, because of which our code may not work on some older browsers. But you know what? Fuck it. We don't want to support older browsers, not in our play time at least.
+  ~db.version(1)~ is useful when we later need to migrate our data or something like that (we won't do it today). We created two stores as we discussed, but notice ~posts~ has no column for `content`. We actually don't need to mention all the fields we wanna store. We only need to mention the fields which we wanna index, so we can query with them later.
 
-- *Fetch Feeds and Add Feed widget*
+- *Open db and start working peasants!*
 
-  Let's add another widget, we might want to fetch our feeds at later time right? And we of course want to add new feeds.
-
-  Create a file: ~components/sidebar-fetch-n-add-widget.js~
+  That's all it needs to setup the db. We can now call ~db.open()~ and start working with dexie right away.
 
   #+begin_src javascript
-  //components/sidebar-fetch-n-add-widget.js
-  import h from 'virtual-dom/h';
-  import {Observable} from 'rx';
-
-  let view = () =>
-    <ul className="sidebar-controls">
-      <li className="sidebar-control fetch-all-btn">Fetch All Feeds</li>
-
-      <li className="sidebar-control new-feed-btn">Add New Feed
-        <input className="new-feed-input" type="url" required />
-      </li>
-    </ul>
-    ;
-
-  let render_ = () =>
-        Observable
-        .return(view());
-
-  export default render_;
+  //db.js
+  db.open();
   #+end_src
 
-  We also need to update ~components/sidebar.js~:
+  Our ~src/db.js~ looks like this at the moment:
 
-  #+begin_src javascript
-  //components/sidebar.js
-  import {Observable} from 'rx';
-  import h from 'virtual-dom/h';
+    #+begin_src javascript
+    import Dexie from 'dexie';
 
-  import filterWidget_ from './sidebar-feed-filter';
-  import fetchNAddWidget_ from './sidebar-fetch-n-add-widget';
+    let db = new Dexie('yarr');
 
-  let view = (filterWidget, fetchNAddWidget) =>
-    <div className='sidebar-container'>
-      <div className="sidebar-brand">
-        <h2 className="sidebar-brand">Yarr</h2>
-      </div>
+    //The object store will allow any properties on your stored objects but you can only query them by indexed properties
+    db.version(1).stores({
+      feeds: 'url, name',
+      posts: 'link, title, author, publishedDate, categories, read, feedUrl'
+    });
 
-      {filterWidget}
-      {fetchNAddWidget}
+    db.open();
 
-    </div>
+    window.Posts = db.posts;
+    window.Feeds = db.feeds;
 
-
-  let render_ = () =>
-    Observable
-    .combineLatest(
-      filterWidget_(),
-      fetchNAddWidget_(),
-      view
-    );
-
-  export default render_;
+    export default {db, Posts: db.posts, Feeds: db.feeds};
   #+end_src
 
-  *Interactivity*
+  To access our ~posts~ and ~feeds~ stores, we need to use ~db.<storeName>~ sytanx. So we are exporting them as ~Posts~ and ~Feeds~. We've also put them on `window` so we can play around with them in console.
 
-  Notice that we have an ~<input>~ field for adding a feed, but it has ~display: hidden~. We want to toggle it when we click ~Add New Feed~ button.
+** Webpack dexie fix/hack
+If you just import dexie, you'll see there's an error in the console and nothing is rendered. Well, that's because dexie supports AMD and webpack don't like it. So we'll do a quick hackish fix for the time being (until webpack fix it themselves).
 
-  #+begin_src javascript
-  import h from 'virtual-dom/h';
-  import {Observable} from 'rx';
+Open ~/node_modules/dexie/dist/latest/Dexie.js~, go the end, and comment out AMD support code:
 
-  import {clicksByClass_} from '../events';
+#+begin_src javascript
+// /node_modules/dexie/dist/latest/Dexie.js
+.
+.
+.
+}).apply(null,
 
-  let view = (addFeedInputStyles) =>
-    <ul className="sidebar-controls">
-      <li className="sidebar-control fetch-all-btn">Fetch All Feeds</li>
+    // AMD:
+    // typeof define === 'function' && define.amd ?
+    // [self || window, function (name, value) { define(name, function () { return value; }); }] :
 
-      <li className="sidebar-control new-feed-btn">Add New Feed
-        <input className="new-feed-input" style={addFeedInputStyles} type="url" required />
-      </li>
-    </ul>
-    ;
-
-  let render_ = () => {
-    let addFeedBtnClicks_ = clicksByClass_('new-feed-btn');
-
-    let addFeedInputStyles_ = addFeedBtnClicks_
-          .startWith(false)
-          .scan(acc => !acc)
-          .map(show => show
-               ? {display: 'inline-block'}
-               : {display: 'none' });
-
-    return Observable
-      .combineLatest(
-        addFeedInputStyles_,
-        view
-      );
-  }
-
-  export default render_;
-  #+end_src
-
-  We could have simply toggled a class on our ~<input>~ field, but this is another way I wanted to demonstrate. Instead of toggeling classes in side-effect code, we can do it in more pure way like this. We create an Observable for inline-styles of the input block, and create an Observable which emits ~{display: 'none'}~ or ~{display: 'inline-block'}~ alternatively when user clicks the `Add New Feed` button. ~scan~ is similar to ~reduce~, Google it.
-
-- *List of Subscribed Feeds*
-
-  Now our sidebar don't feel empty. Are we missing something from UX perspective? A list of subsribed feeds would be a nice to have I guess? Or is it a must have? Must have it is.
-
-  Create ~components/sidebar-feed-list.js~ file:
-
-  #+begin_src javascript
-  //components/sidebar-feed-list.js
-  import h from 'virtual-dom/h';
-  import {Observable} from 'rx';
-
-  let nodeView = (feed, extraClasses) =>
-    <li className="sidebar-feedlist-item">
-      <a className={extraClasses + ' sidebar-feed'} href={feed.url}>{feed.name}</a>
-    </li>;
+    // CommonJS:
+    typeof global !== 'undefined' && typeof module !== 'undefined' && module.exports ?
+.
+.
+.
+#+end_src
 
 
-  let view = (feedViews) =>
-    <ul className="sidebar-feedlist">
-      {nodeView({url: 'all-feeds', name: 'All'}, 'active')}
-      {feedViews}
-    </ul>;
+** Make Feeds offline first
+So how do we actually use offline storage in our app? We'll go for `offline-first`. i.e We'll fetch the feeds, store them in IndexedDB (or let's call it dexie db), and feed our app from the dexie db. So whenever we need to update our data (feeds/posts), we first update the dexie db. /Spoiler:/ To make the interaction b/w dexieDb and our UI smoother, we'll actually make our db reactive, so that any change in our db will automatically change the UI.
 
-  let render_ = () => {
-    let feeds_ = Observable
-          .return([
-            {name: 'Fake feed 1', url: '#'},
-            {name: 'Fake feed 2', url: '#'},
-            {name: 'Fake feed 3', url: '#'}
-          ]);
-
-    return feeds_
-      .startWith([])
-      .map(feeds => feeds.map(nodeView))
-      .map(view);
-  }
-
-  export default render_;
-  #+end_src
-
-  Notice we used fake feeds to quickly get done with the widget first. Let's also add some interactivity (change `active` class on feed change).
-
-  #+begin_src javascript
-    .
-    .
-    let selectFeedClicks_ = clicksByClass_('sidebar-feed');
-    selectFeedClicks_
-      .do(e => e.preventDefault())
-      .do(e => {
-          let activeEl = document.querySelector('.sidebar-feed.active');
-          if(activeEl) activeEl.classList.remove('active');
-
-          e.target.classList.add('active');
-      })
-      .subscribe();
-
-    return feeds_
-    .
-    .
-    .
-  #+end_src
-
-** Models
-We are trying our best to keep the components isolated, but it won't always be possible/feasible to do so. Applications have state, that's their job. But we can keep our state properly so it won't create a mess around. Let's create Models to provide sane interface for our global state (/data).
-
-What kind of data do an RSS reader have? RSS feeds, and posts that come along with them. Now we can keep both of them in same model (as we're doing till now), or we can separate them. We will separate them.
-
-Create a directory: ~src/models~ and files ~src/models/feeds.js~ and =src/models/posts.js=. Delete ~src/feeds.js~ (or move it to models, your choice).
-
-We will implement offline storage in next step. In this step, we're just marking our models into two files.
+Let's open ~src/models/feeds.js~ and import ~Feeds~ table from ~db.js~
 
 #+begin_src javascript
 //models/feeds.js
-import {Observable} from 'rx';
-import {ajax} from 'jQuery';
-
-let feedUrls = [
-  'https://hacks.mozilla.org/category/es6-in-depth/feed/',
-  'http://feeds.feedburner.com/JohnResig',
-  'http://unisonweb.org/feed.xml'
-];
-
-let fetchFeed = (url) => {
-  return ajax({
-    url: `http://ajax.googleapis.com/ajax/services/feed/load?v=1.0&num=30&q=${url}`,
-    dataType: 'jsonp'
-  }).promise();
-};
-
-
-let feeds_ = Observable
-      .from(feedUrls)
-      .flatMap(fetchFeed)
-      .map(res => res.responseData.feed);
-
-export default {feeds_};
+import {Feeds} from '../db';
+.
+.
+.
 #+end_src
+
+Since we're going offline-first, let's first add feeds to db:
 
 #+begin_src javascript
-//models/posts.js
-import {feeds_} from './feeds';
+//models/feeds.js
 
-let posts_ = feeds_
-      .map(feed => feed.entries);
-
-export default {posts_};
-#+end_src
-
-We didn't change much, just created ~posts_~ as a separate thing than ~feeds_~. We also need to update our ~components/posts-list.js~ to use ~posts_~.
-
-#+begin_src javascript
-//components/posts-list.js
-import h from 'virtual-dom/h';
-import {Observable} from 'rx';
-
-import {posts_} from '../models/posts';
-import {formatDate} from '../utils';
-
-let postView = (post) =>
-.
-.
-.
-let render_ = () => {
-  return posts_
-    .map(posts => posts.map(postView))
-    .reduce((acc, posts) => acc.concat(posts))
-    .map(view);
-}
-
-export default render_;
-#+end_src
-
-We can also change the feeds-list sidebar component to use actual feeds. Let's just do it.
-
-#+begin_src javascript
-//components/sidebar-feed-list.js
-import {feeds_} from '../models/feeds';
-.
-.
-.
-let render_ = () => {
-return feeds_
-    .map(feed => {
-      return {url: feed.feedUrl, name: feed.title}
-    })
-    .toArray()
-    .startWith([])
-    .do(x => console.log(x))
-    .map(feeds => feeds.map(nodeView))
-    .map(view);
-}
-
-export default render_;
-#+end_src
-
-~Observable.prototype.toArray~ waits for the Observable to complete and return it as an array. We're not going to do it this way. We'll change all this later when we implement reactive offline storage.
-
-At this point, the app shall be looking like this:
-
-If it is not, you can always just put your code in trash and copy-over the code from whatever step from this repo :P
-
-Time to move on to next step!
-
-#+begin_src bash
-git checkout 7-offline-storage-with-dexiejs
 #+end_src
