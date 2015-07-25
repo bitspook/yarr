@@ -16,11 +16,19 @@ let fetchFeed = (url) => {
   }).promise();
 };
 
+let addPostToDb = (post, feedUrl) => {
+  post.read = 'false';
+  post.publishedDate = new Date(post.publishedDate);
+  post.feedUrl = feedUrl;
+  return Posts.add(post);
+};
+
 let addFeed_ = (feedUrl) => Observable
       .of(feedUrl)
       .flatMap(fetchFeed)
       .flatMap(data => {
         let feed = data.responseData.feed;
+        let entries = feed.entries;
 
         let addFeedP = Feeds.add({
           url: feed.feedUrl,
@@ -29,12 +37,19 @@ let addFeed_ = (feedUrl) => Observable
           description: feed.description
         });
 
-        return addFeedP;
+        return Observable
+          .fromPromise(addFeedP)
+          .flatMap(() => Observable.from(entries))
+          .flatMap(p => addPostToDb(p, feed.feedUrl));
       });
 
 //add default feeds
 Observable
-  .from(feedUrls)
+  .fromPromise(Feeds.count())
+  .flatMap(count => {
+    let urls = count === 0 ? feedUrls : [];
+    return Observable.from(urls);
+  })
   .flatMap(addFeed_)
   .subscribe(
     x => console.log('Successfully added', x),
@@ -43,8 +58,6 @@ Observable
 
 
 let feeds_ = Observable
-      .from(feedUrls)
-      .flatMap(fetchFeed)
-      .map(res => res.responseData.feed);
+      .fromPromise(Feeds.toArray()).share();
 
 export default {feeds_};
