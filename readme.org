@@ -89,19 +89,224 @@ Open ~/node_modules/dexie/dist/latest/Dexie.js~, go the end, and comment out AMD
 ** Make Feeds offline first
 So how do we actually use offline storage in our app? We'll go for `offline-first`. i.e We'll fetch the feeds, store them in IndexedDB (or let's call it dexie db), and feed our app from the dexie db. So whenever we need to update our data (feeds/posts), we first update the dexie db. /Spoiler:/ To make the interaction b/w dexieDb and our UI smoother, we'll actually make our db reactive, so that any change in our db will automatically change the UI.
 
-Let's open ~src/models/feeds.js~ and import ~Feeds~ table from ~db.js~
+- *Offline first Feeds*
+
+  Let's open ~src/models/feeds.js~ and import ~Feeds~ table from ~db.js~
+
+  #+bebgin_src javascript
+  //models/feeds.js
+  import {Feeds} from '../db';
+  .
+  .
+  .
+  #+end_src
+
+  Since we're going offline-first, let's first add feeds to db:
+
+  #+begin_src javascript
+  //models/feeds.js
+  .
+  .
+  .
+  let addFeed_ = (feedUrl) => Observable
+        .of(feedUrl)
+        .flatMap(fetchFeed)
+        .flatMap(data => {
+          let feed = data.responseData.feed;
+
+          return Feeds.add({
+            url: feed.feedUrl,
+            name: feed.title,
+            source: feed.link,
+            description: feed.description
+          });
+        });
+
+  //add default feeds
+  Observable
+    .from(feedUrls)
+    .flatMap(addFeed_)
+    .subscribe(
+      x => console.log('Successfully added', x),
+      e => console.warn('Error while adding feed: ', e)
+    );
+  .
+  .
+  .
+  #+end_src
+
+  Cool! But we are still returning the feeds by fetching them, we shall return the ~feeds_~ by fetching them from dexie-db since we're saving our feeds in it anyway.
+
+  For fetching data, dexie.js provides ~db.<table>.toArray()~ to give all the documents in the dexie table as a promise of array. And how do we get value from a promise? ~flatMap~ ftw!
+
+  #+begin_src javascript
+  .
+  .
+  .
+  let feeds_ = Observable
+        .fromPromise(Feeds.toArray())
+        .do(x => console.log(x));
+
+  export default {feeds_};
+  #+end_src
+
+  *An error along Observable chain*
+
+  Oops! That broke almost everything. We used ~Observable.prototype.do~ above to log what our `feeds_` is returning. ~do~ is and should be used for debugging like side-effects only.
+
+  Our ~posts-list~ view broke because our feeds don't have posts any more, but why did ~sidebar-feeds-list~ broke? Take a look at ~src/components/sidebar-feed-list.js~, we are returning an array of feeds now, not a stream of one feed at a time. We can easily convert this array to an Observable of single feeds (guess how), but we won't. Returning an array of feeds make our job of re-rendering the sidebar-feed-list much more easier whenever a new feed is added or removed. Let's change ~src/components/sidebar-feed-list.js~ to accommodate new changes:
+
+  #+begin_src javascript
+  // components/sidebar-feed-list.js
+  .
+  .
+  .
+  let render_ = () => {
+    let selectFeedClicks_ = clicksByClass_('sidebar-feed');
+    selectFeedClicks_
+      .do(e => e.preventDefault())
+      .do(e => {
+          let activeEl = document.querySelector('.sidebar-feed.active');
+          if(activeEl) activeEl.classList.remove('active');
+
+          e.target.classList.add('active');
+      })
+      .subscribe();
+
+    return feeds_
+      .startWith([])
+      .map(feeds => feeds.map(nodeView))
+      .map(view);
+  }
+
+  export default render_;
+  #+end_src
+
+  This should work, right? But it doesn't! Why not? If we look in the console, there's an error saying:
+
+  #+begin_src bash
+  Error occured somewhere along Observable chain TypeError: posts.map is not a function
+      at http://localhost.com:8080/dist/app.js:11638:19
+  #+end_src
+
+  This line is from ~console.debug~ we have put in our ~src/renderer.js~. This is expected behavior from Observable. Whenever any error occurs along the Observable chain, the chain stops unless we ask it not to. That's what is happening here. Let's change ~src/models/posts.js~ to stop this error temporarily.
+
+  #+begin_src javascript
+  // models/posts.js
+  import {feeds_} from './feeds';
+  import {Observable} from 'rx';
+
+  let posts_ = Observable.return([]);
+
+  export default {posts_};
+  #+end_src
+
+  Awesome! Sidebar has the feeds list (as expected) now. But there's another error in the console which occurs when we add those default feeds to dexie.db. It's not affecting our app because it's not part of the main Observable change that end up being rendered. But we should get rid of it. This error occurs when we try to add items with same primary_key to dexie-db. We try to add feeds to the `Feeds` table every time we refresh the page. We should check if there are any feeds in the `Feeds` and add feeds only if there are none. Let's do this:
+
+  #+begin_src javascript
+  .
+  .
+  .
+  //add default feeds
+  Observable
+    .fromPromise(Feeds.count())
+    .flatMap(count => {
+      let urls = count === 0 ? feedUrls : [];
+      return Observable.from(urls);
+    })
+    .flatMap(addFeed_)
+    .subscribe(
+      x => console.log('Successfully added', x),
+      e => console.warn('Error while adding feed: ', e)
+    );
+  .
+  .
+  .
+  #+end_src
+
+  ~Feeds.count()~ give us a promise of number of items in our `Feeds` dexie table. If the number of feeds in our dexie-db is 0, we return an Observable of feed urls, otherwise an empty one (from empty array) which is like a no-op. This got us rid from that error in console. Cool!
+
+- *Offline first Posts*
+
+  Noticed we aren't adding posts anywhere? We should add posts to our ~Posts~ dexie table whenever we add a feed. Let's rework that ~addFeed_~ function in ~src/models/feeds.js~:
+
+  #+begin_src javascript
+  //models/feeds.js
+  .
+  .
+  .
+  let addPostToDb = (post, feedUrl) => {
+    post.read = 'false';
+    post.publishedDate = new Date(post.publishedDate);
+    post.feedUrl = feedUrl;
+    return Posts.add(post);
+  };
+
+  let addFeed_ = (feedUrl) => Observable
+        .of(feedUrl)
+        .flatMap(fetchFeed)
+        .flatMap(data => {
+          let feed = data.responseData.feed;
+          let entries = feed.entries;
+
+          let addFeedP = Feeds.add({
+            url: feed.feedUrl,
+            name: feed.title,
+            source: feed.link,
+            description: feed.description
+          });
+
+          return Observable
+            .fromPromise(addFeedP)
+            .flatMap(() => Observable.from(entries))
+            .flatMap(p => addPostToDb(p, feed.feedUrl));
+        });
+  .
+  .
+  .
+  #+end_src
+
+  We created a helper method ~addPostToDb~ to add post to dexie table `Posts` and give us an array of status of operation. And now when we fetch a feed, we add it to ~Feeds~ table, and then create another Observable from the ~feed.entries~ array, add each post to ~Posts~, and return that Observable. Why are we doing it this way? Remember what happen when any error happen on an Observable chain? It goes straight to subscribe method, and stop the chain. Error handling is one of killer features of Rx. To reliably add the posts and feeds, we put them on the Observable chain (and not just make some random ~addPostToDb~ operations). So if any post fails to be added to the dexie db, we could catch the error (although we will not :P).
+
+  To check if your code is working, open console in your browser, and do ~Feeds.clear()~ (to empty Feeds table), and then refresh the page. Then enter ~Posts.count(function(c) {console.log(c); })~ to check the Posts count.
+
+  *No Feeds on first refresh*
+
+    Notice when we clear the Feeds db, and refresh the Page, it shows in console many messages of /XXX successfully added/, and ~Feeds.count()~ and ~Posts.count()~ shows >0, but there are no Feeds or Posts. Refresh the page again and they'll show up. Why's that?
+
+    Well, when our app loads and there are no Feeds in db, we add Feeds to db, and get them from db for UI on next step. Now all these operations are asynchronous. The operation of adding feeds to db finisher *after* the operation of fetching feeds from db, so we see nothing. On second refresh, feeds are already present in the db. Let this be for now, we'll make our db reactive in next step, so whenever a feed/post is added to the db, our UI will show it right away.
+
+  Now that we have our posts added to the db, let's serve them to our ~posts-list~ component. Open up ~src/models/posts.js~:
+
+  #+begin_src javascript
+  import {Posts} from '../db';
+  import {Observable} from 'rx';
+
+  let posts_ = Observable
+        .fromPromise(Posts.orderBy('publishedDate').reverse().toArray());
+
+  export default {posts_};
+  #+end_src
+
+  And it just worked! That's like super cool, isn't it? Go eat some candy if you said no.
+
+  Now that we are getting *all* our posts in a single array, we can do a little change in ~src/components/posts-list.js~:
+
+  #+begin_src javascript
+  // src/components/posts-list.js
+  .
+  .
+  .
+  let render_ = () => posts_
+        .map(posts => posts.map(postView))
+        .map(view)
+        .startWith(view());
+  export default render_;
+  #+end_src
+
+
+Awesome! With that done, we can move on to next step and try to make our database reactive. We'll aim for a functionality that whenever we add/remove/change anything in our offline database (IndexedDB that is), anything using that data (in UI or otherwise) shall respond too. I love this feature in Meteor (although Meteor's client side db is not persistent by default).
 
 #+begin_src javascript
-//models/feeds.js
-import {Feeds} from '../db';
-.
-.
-.
-#+end_src
-
-Since we're going offline-first, let's first add feeds to db:
-
-#+begin_src javascript
-//models/feeds.js
-
+git checkout
 #+end_src
