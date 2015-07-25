@@ -1,7 +1,7 @@
 import {Observable} from 'rx';
 import {ajax} from 'jQuery';
 
-import {Feeds} from '../db';
+import {Feeds, reactiveDexieTable_} from '../db';
 
 let feedUrls = [
   'https://hacks.mozilla.org/category/es6-in-depth/feed/',
@@ -58,6 +58,12 @@ Observable
 
 
 let feeds_ = Observable
-      .fromPromise(Feeds.toArray()).share();
+      .merge(
+        reactiveDexieTable_(Feeds, 'creating'),
+        reactiveDexieTable_(Feeds, 'updating'),
+        reactiveDexieTable_(Feeds, 'deleting')
+      )
+      .startWith('')
+      .flatMap(() => Feeds.toArray()).share();
 
 export default {feeds_};
