@@ -1,312 +1,150 @@
-* Yarr : Offline Storage with Dexie.js
-It's time we implement offline storage. We're going to use IndexedDB for storage, but not directly. We'll use an abstraction over IndexedDB called dexie.js.
-We'll put all our database related code in ~/src/db.js~, so create that file.
+* Yarr : Reactive Dexie
 
-** Hello Dexie
-Dexie's interface is somewhat similar to that of a SQL database. If you've used one before, you'll feel almost at home.
+In this step we'll make our data sources (`feeds_` and `posts_`) reactive, and we'll see how easy it is to make your own Observable.
 
-- *Create a Store*
-
-  First we need to create a store in dexie. It's like creating a database in which we'll then create tables for ~feeds~ and ~posts~.
-
-  #+begin_src javascript
-  //db.js
-  import Dexie from 'dexie';
-
-  let db = new Dexie('yarr');
-  #+end_src
-
-- *Create Tables*
-
-  Next step, to create tables:
-
-  #+begin_src javascript
-  //The object store will allow any properties on your stored objects but you can only query them by indexed properties
-  db.version(1).stores({
-    feeds: 'url, name',
-    posts: 'link, title, author, publishedDate, categories, read, feedUrl'
-  });
-  #+end_src
-
-  ~db.version(1)~ is useful when we later need to migrate our data or something like that (we won't do it today). We created two stores as we discussed, but notice ~posts~ has no column for `content`. We actually don't need to mention all the fields we wanna store. We only need to mention the fields which we wanna index, so we can query with them later.
-
-- *Open db and start working peasants!*
-
-  That's all it needs to setup the db. We can now call ~db.open()~ and start working with dexie right away.
-
-  #+begin_src javascript
-  //db.js
-  db.open();
-  #+end_src
-
-  Our ~src/db.js~ looks like this at the moment:
-
-    #+begin_src javascript
-    import Dexie from 'dexie';
-
-    let db = new Dexie('yarr');
-
-    //The object store will allow any properties on your stored objects but you can only query them by indexed properties
-    db.version(1).stores({
-      feeds: 'url, name',
-      posts: 'link, title, author, publishedDate, categories, read, feedUrl'
-    });
-
-    db.open();
-
-    window.Posts = db.posts;
-    window.Feeds = db.feeds;
-
-    export default {db, Posts: db.posts, Feeds: db.feeds};
-  #+end_src
-
-  To access our ~posts~ and ~feeds~ stores, we need to use ~db.<storeName>~ sytanx. So we are exporting them as ~Posts~ and ~Feeds~. We've also put them on `window` so we can play around with them in console.
-
-** Webpack dexie fix/hack
-If you just import dexie, you'll see there's an error in the console and nothing is rendered. Well, that's because dexie supports AMD and webpack don't like it. So we'll do a quick hackish fix for the time being (until webpack fix it themselves).
-
-Open ~/node_modules/dexie/dist/latest/Dexie.js~, go the end, and comment out AMD support code:
+Take a look at ~src/models/feeds.js~. We are exporting:
 
 #+begin_src javascript
-// /node_modules/dexie/dist/latest/Dexie.js
-.
-.
-.
-}).apply(null,
-
-    // AMD:
-    // typeof define === 'function' && define.amd ?
-    // [self || window, function (name, value) { define(name, function () { return value; }); }] :
-
-    // CommonJS:
-    typeof global !== 'undefined' && typeof module !== 'undefined' && module.exports ?
-.
-.
-.
+let feeds_ = Observable
+      .fromPromise(Feeds.toArray()).share();
 #+end_src
 
+which we then use as our source for feeds across our app. Basically just returning data straight from the dexie database. Now let's formulate what our requirements are for a *reactive* data source:
 
-** Make Models Offline First
-So how do we actually use offline storage in our app? We'll go for `offline-first`. i.e We'll fetch the feeds, store them in IndexedDB (or let's call it dexie db), and feed our app from the dexie db. So whenever we need to update our data (feeds/posts), we first update the dexie db. /Spoiler:/ To make the interaction b/w dexieDb and our UI smoother, we'll actually make our db reactive, so that any change in our db will automatically change the UI.
+> Reactive data source should give us new data *whenever the data is added, removed or changed*
 
-- *Offline first Feeds*
+Dexie js provide us hooks for receiving events for exactly above 3 situations: https://github.com/dfahlander/Dexie.js/wiki/Table It even has a hook for /reading/, but we're not interested in that.
 
-  Let's open ~src/models/feeds.js~ and import ~Feeds~ table from ~db.js~
+Now if we can convert these hooks to Observable, and merge them such that when any of the above 3 hooks fire, we re-fetch the data and make ~feeds_~ emit it again, our whole UI will update. That's what Observable are, right? Asynchronous push based collections.
 
-  #+bebgin_src javascript
-  //models/feeds.js
-  import {Feeds} from '../db';
-  .
-  .
-  .
-  #+end_src
+- *Dexie hooks -> Observable*
 
-  Since we're going offline-first, let's first add feeds to db:
+  Let's start with making a helper function that will convert a hook into an Observable. Open up ~src/db.js~:
 
   #+begin_src javascript
-  //models/feeds.js
+  // db.js
+  import {Observable} from 'rx';
   .
   .
   .
-  let addFeed_ = (feedUrl) => Observable
-        .of(feedUrl)
-        .flatMap(fetchFeed)
-        .flatMap(data => {
-          let feed = data.responseData.feed;
+  let reactiveDexieTable_ = (table, hookName) => {
+    return Observable.create((obs) => {
+      let dbListener = table.hook(hookName, (pk, obj, txn, update) => {
+        //Can't use `arguments` because webpack.
+        //there are 4 arguments for 'updating' op, otherwise there are 3.
+        //in case of 'updating' first arg is 'modifications', and other three are same
+        obs.onNext(pk, obj, txn, update);
+      });
 
-          return Feeds.add({
-            url: feed.feedUrl,
-            name: feed.title,
-            source: feed.link,
-            description: feed.description
-          });
-        });
+      return () => {
+        table.hook(hookName).unsubscribe(dbListener);
+      };
+    });
 
-  //add default feeds
-  Observable
-    .from(feedUrls)
-    .flatMap(addFeed_)
+  };
+
+  export default {
+    db,
+    Posts: db.posts,
+    Feeds: db.feeds,
+    reactiveDexieTable_
+  };
+  #+end_src
+
+  ~reactiveDexieTable_~ shall give us an Observable for listening to one of ~creating~, ~updating~, ~deleting~ hooks on a dexie table.
+
+  Creating an Observable is really simple. There's a helper method ~Observable.create~ which makes the job easier. ~Observable.create~ takes a function (call it `cb`) as argument. `cb` is given an Observer (call it `obs`) as argument. It's `cb`'s duty to call `obs`'s ~onNext~, ~onError~, ~onComplete~, when it does, that's when our resulting Observable will emit values/errors/onCompleted. `cb` shall return a function which will be called when it's time to dispose the Observable. Ideally, `cb`'s return function clears whatever resources our Observable used (it should remove event listeners it added for example).
+
+  In our case, we don't want the resulting Observable to ever complete, so we don't have an ~obs.onCompleted~ call. And we don't have an ~obs.onError~ call, because bad developers don't handle errors. What? You really thought I am a good developer? Lol! Can't believe you fell for that. Actually I do believe that, I anticipated that; you're too predictable you know. Honestly, I didn't anticipated shit, I just had to be a smartass. You know what! I actually did anticipate that, but I had to be humble. Really honestly though, I /<smack>/...okay let's proceed. /You didn't need to hit me. You prick!/
+
+- *Test reactive dexie table*
+
+  Let's do a quick test run. We'll create an Observable for listening to `creating` hook, clear all the feeds, refresh the browser and see if this Observable emits. Put this anywhere in ~src/db.js~:
+  #+begin_src javascript
+  reactiveDexieTable_(db.feeds, 'creating')
+    .do(x => console.log('WHOA! Hook is working!', x))
+    .subscribe();
+  #+end_src
+
+  Open console in your browser, do a ~Feeds.clear()~ and ~Posts.clear()~, and refresh. If you see that =Whoa!= message, our new Observable is working. Awesome! Remove code added above.
+
+- *Cascading delete for Posts*
+
+  Let's do something little more useful. Noticed we had to clear both ~Feeds~ and ~Posts~ above (so re-adding ~Posts~ won't show an error). Keeping ~Posts~ in db don't make any sense when we've removed the `Feed` they belong to. Let's use our awesome new reactive table Observable and delete all the Posts that belong to the feed whenever we delete the feed.
+
+  #+begin_src javascript
+  .
+  .
+  .
+  //delete all posts whenever a feed is deleted from dexie db
+  reactiveDexieTable_(db.feeds, 'deleting')
+    .flatMap(feedUrl => {
+      return db.posts.where('feedUrl').equals(feedUrl).delete();
+    })
     .subscribe(
-      x => console.log('Successfully added', x),
-      e => console.warn('Error while adding feed: ', e)
+      x => console.log(`${x} posts deleted successfully in cascading delete operation.`),
+      e => console.error('Error while cascading Posts delete', e)
     );
   .
   .
   .
   #+end_src
 
-  Cool! But we are still returning the feeds by fetching them, we shall return the ~feeds_~ by fetching them from dexie-db since we're saving our feeds in it anyway.
+  Now go to browser's console and do a ~Feeds.clear()~ again. You'll see ~N posts deleted~ messages, and if you refresh the page, you'll see Posts are all gone.
 
-  For fetching data, dexie.js provides ~db.<table>.toArray()~ to give all the documents in the dexie table as a promise of array. And how do we get value from a promise? ~flatMap~ ftw!
+- *Reactive Feeds*
+
+  That's all great, let's use this in our UI. We'll start with feeds. Open ~src/models/feeds.js~:
 
   #+begin_src javascript
+  import {Feeds, reactiveDexieTable_} from '../db';
   .
   .
   .
   let feeds_ = Observable
-        .fromPromise(Feeds.toArray())
-        .do(x => console.log(x));
+        .merge(
+          reactiveDexieTable_(Feeds, 'creating'),
+          reactiveDexieTable_(Feeds, 'updating'),
+          reactiveDexieTable_(Feeds, 'deleting')
+        )
+        .startWith('')
+        .flatMap(() => Feeds.toArray()).share();
 
   export default {feeds_};
   #+end_src
 
-  *An error along Observable chain*
+  We create 3 Observable to inform us whenever ~Feeds~ are updated, deleted or added, and we ~Observable.merge~ them so that we get a notification when either one of these events happen. Can you guess why we did ~.startWith('')~ here? Without ~startWith~, the Observable will keep waiting for one of the 3 events to happen. We don't want that, we want to send feeds to our UI on initial refresh too, so we start with an empty notification, and send feeds every time page refreshes, and then we send them every time something happens in our ~Feeds~ table.
 
-  Oops! That broke almost everything. We used ~Observable.prototype.do~ above to log what our `feeds_` is returning. ~do~ is and should be used for debugging like side-effects only.
+  Let's try it real quick. Open up the console in browser and do ~Feeds.clear()~. You'll see all the feeds from our feeds list in sidebar vanish. Is it awesome or what! If you refresh the page, feeds will get added back again on first refresh, however posts will not. That's expected, let's make Posts reactive too.
 
-  Our ~posts-list~ view broke because our feeds don't have posts any more, but why did ~sidebar-feeds-list~ broke? Take a look at ~src/components/sidebar-feed-list.js~, we are returning an array of feeds now, not a stream of one feed at a time. We can easily convert this array to an Observable of single feeds (guess how), but we won't. Returning an array of feeds make our job of re-rendering the sidebar-feed-list much more easier whenever a new feed is added or removed. Let's change ~src/components/sidebar-feed-list.js~ to accommodate new changes:
+- *Reactive Posts*
 
-  #+begin_src javascript
-  // components/sidebar-feed-list.js
-  .
-  .
-  .
-  let render_ = () => {
-    let selectFeedClicks_ = clicksByClass_('sidebar-feed');
-    selectFeedClicks_
-      .do(e => e.preventDefault())
-      .do(e => {
-          let activeEl = document.querySelector('.sidebar-feed.active');
-          if(activeEl) activeEl.classList.remove('active');
-
-          e.target.classList.add('active');
-      })
-      .subscribe();
-
-    return feeds_
-      .startWith([])
-      .map(feeds => feeds.map(nodeView))
-      .map(view);
-  }
-
-  export default render_;
-  #+end_src
-
-  This should work, right? But it doesn't! Why not? If we look in the console, there's an error saying:
-
-  #+begin_src bash
-  Error occured somewhere along Observable chain TypeError: posts.map is not a function
-      at http://localhost.com:8080/dist/app.js:11638:19
-  #+end_src
-
-  This line is from ~console.debug~ we have put in our ~src/renderer.js~. This is expected behavior from Observable. Whenever any error occurs along the Observable chain, the chain stops unless we ask it not to. That's what is happening here. Let's change ~src/models/posts.js~ to stop this error temporarily.
+  How do we make Posts reactive now? Exactly how we made Feeds reactive, dumbass!
 
   #+begin_src javascript
   // models/posts.js
-  import {feeds_} from './feeds';
-  import {Observable} from 'rx';
-
-  let posts_ = Observable.return([]);
-
-  export default {posts_};
-  #+end_src
-
-  Awesome! Sidebar has the feeds list (as expected) now. But there's another error in the console which occurs when we add those default feeds to dexie.db. It's not affecting our app because it's not part of the main Observable change that end up being rendered. But we should get rid of it. This error occurs when we try to add items with same primary_key to dexie-db. We try to add feeds to the `Feeds` table every time we refresh the page. We should check if there are any feeds in the `Feeds` and add feeds only if there are none. Let's do this:
-
-  #+begin_src javascript
-  .
-  .
-  .
-  //add default feeds
-  Observable
-    .fromPromise(Feeds.count())
-    .flatMap(count => {
-      let urls = count === 0 ? feedUrls : [];
-      return Observable.from(urls);
-    })
-    .flatMap(addFeed_)
-    .subscribe(
-      x => console.log('Successfully added', x),
-      e => console.warn('Error while adding feed: ', e)
-    );
-  .
-  .
-  .
-  #+end_src
-
-  ~Feeds.count()~ give us a promise of number of items in our `Feeds` dexie table. If the number of feeds in our dexie-db is 0, we return an Observable of feed urls, otherwise an empty one (from empty array) which is like a no-op. This got us rid from that error in console. Cool!
-
-- *Offline first Posts*
-
-  Noticed we aren't adding posts anywhere? We should add posts to our ~Posts~ dexie table whenever we add a feed. Let's rework that ~addFeed_~ function in ~src/models/feeds.js~:
-
-  #+begin_src javascript
-  //models/feeds.js
-  .
-  .
-  .
-  let addPostToDb = (post, feedUrl) => {
-    post.read = 'false';
-    post.publishedDate = new Date(post.publishedDate);
-    post.feedUrl = feedUrl;
-    return Posts.add(post);
-  };
-
-  let addFeed_ = (feedUrl) => Observable
-        .of(feedUrl)
-        .flatMap(fetchFeed)
-        .flatMap(data => {
-          let feed = data.responseData.feed;
-          let entries = feed.entries;
-
-          let addFeedP = Feeds.add({
-            url: feed.feedUrl,
-            name: feed.title,
-            source: feed.link,
-            description: feed.description
-          });
-
-          return Observable
-            .fromPromise(addFeedP)
-            .flatMap(() => Observable.from(entries))
-            .flatMap(p => addPostToDb(p, feed.feedUrl));
-        });
-  .
-  .
-  .
-  #+end_src
-
-  We created a helper method ~addPostToDb~ to add post to dexie table `Posts` and give us an array of status of operation. And now when we fetch a feed, we add it to ~Feeds~ table, and then create another Observable from the ~feed.entries~ array, add each post to ~Posts~, and return that Observable. Why are we doing it this way? Remember what happen when any error happen on an Observable chain? It goes straight to subscribe method, and stop the chain. Error handling is one of killer features of Rx. To reliably add the posts and feeds, we put them on the Observable chain (and not just make some random ~addPostToDb~ operations). So if any post fails to be added to the dexie db, we could catch the error (although we will not :P).
-
-  To check if your code is working, open console in your browser, and do ~Feeds.clear()~ (to empty Feeds table), and then refresh the page. Then enter ~Posts.count(function(c) {console.log(c); })~ to check the Posts count.
-
-  *No Feeds on first refresh*
-
-    Notice when we clear the Feeds db, and refresh the Page, it shows in console many messages of /XXX successfully added/, and ~Feeds.count()~ and ~Posts.count()~ shows >0, but there are no Feeds or Posts. Refresh the page again and they'll show up. Why's that?
-
-    Well, when our app loads and there are no Feeds in db, we add Feeds to db, and get them from db for UI on next step. Now all these operations are asynchronous. The operation of adding feeds to db finisher *after* the operation of fetching feeds from db, so we see nothing. On second refresh, feeds are already present in the db. Let this be for now, we'll make our db reactive in next step, so whenever a feed/post is added to the db, our UI will show it right away.
-
-  Now that we have our posts added to the db, let's serve them to our ~posts-list~ component. Open up ~src/models/posts.js~:
-
-  #+begin_src javascript
-  import {Posts} from '../db';
+  import {Posts, reactiveDexieTable_} from '../db';
   import {Observable} from 'rx';
 
   let posts_ = Observable
-        .fromPromise(Posts.orderBy('publishedDate').reverse().toArray());
+        .merge(
+          reactiveDexieTable_(Posts, 'creating'),
+          reactiveDexieTable_(Posts, 'updating'),
+          reactiveDexieTable_(Posts, 'deleting')
+        )
+        .startWith('')
+        .flatMap(() => Posts.orderBy('publishedDate').reverse().toArray());
 
   export default {posts_};
   #+end_src
 
-  And it just worked! That's like super cool, isn't it? Go eat some candy if you said no.
+  Now if you do ~Feeds.clear()~ in console, you'll see posts-list get all cleared too, and you might also see posts getting added dynamically when you refresh the page later.
 
-  Now that we are getting *all* our posts in a single array, we can do a little change in ~src/components/posts-list.js~:
-
-  #+begin_src javascript
-  // src/components/posts-list.js
-  .
-  .
-  .
-  let render_ = () => posts_
-        .map(posts => posts.map(postView))
-        .map(view)
-        .startWith(view());
-  export default render_;
-  #+end_src
+  To delete a single post or feed from console, right click it in UI and /Copy Link Address/. Then in console you can do ~Posts.delete(link)~
 
 
-Awesome! With that done, we can move on to next step and try to make our database reactive. We'll aim for a functionality that whenever we add/remove/change anything in our offline database (IndexedDB that is), anything using that data (in UI or otherwise) shall respond too. I love this feature in Meteor (although Meteor's client side db is not persistent by default).
+Now that our offline database is reactive, bring our UI to life. In next step we'll add functionality to the control widgets in sidebar.
 
-#+begin_src javascript
-git checkout 8-reactive-dexie
+#+begin_src bash
+git checkout 9-bring-ui-to-life
 #+end_src
