@@ -21,7 +21,6 @@ let view = (feedViews) =>
 let render_ = () => {
   let selectFeedClicks_ = clicksByClass_('sidebar-feed');
   selectFeedClicks_
-    .do(e => e.preventDefault())
     .do(e => {
         let activeEl = document.querySelector('.sidebar-feed.active');
         if(activeEl) activeEl.classList.remove('active');
@@ -31,12 +30,7 @@ let render_ = () => {
     .subscribe();
 
   return feeds_
-    .map(feed => {
-      return {url: feed.feedUrl, name: feed.title}
-    })
-    .toArray()
     .startWith([])
-    .do(x => console.log(x))
     .map(feeds => feeds.map(nodeView))
     .map(view);
 }

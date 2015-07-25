@@ -23,9 +23,7 @@ let postView = (post) =>
           </li>
 
           <li className="post-item-meta-item">
-            <p>
-              {formatDate(post.publishedDate)}
-            </p>
+
           </li>
 
           <li className="post-item-meta-item">
@@ -42,13 +40,9 @@ let view = (postViews) =>
     {postViews}
   </section>;
 
-
-
-let render_ = () => {
-  return posts_
-    .map(posts => posts.map(postView))
-    .reduce((acc, posts) => acc.concat(posts))
-    .map(view);
-}
+let render_ = () => posts_
+      .map(posts => posts.map(postView))
+      .map(view)
+      .startWith(view());
 
 export default render_;
