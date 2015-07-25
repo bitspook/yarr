@@ -2,7 +2,7 @@ import h from 'virtual-dom/h';
 import {Observable} from 'rx';
 
 import postsList_ from './posts-list';
-import sidebar_ from './sidebar';
+import sidebar_, {feedFilters_} from './sidebar';
 
 let view = (postsList, sidebar) =>
       <div id='container' className='container'>
@@ -20,7 +20,7 @@ let view = (postsList, sidebar) =>
   ;
 
 let render_ = () => Observable.combineLatest(
-  postsList_(),
+  postsList_(feedFilters_),
   sidebar_(),
   view
 );

@@ -56,6 +56,39 @@ Observable
     e => console.warn('Error while adding feed: ', e)
   );
 
+let fetchAllFeeds_ = () => {
+  let newPosts_ = Observable
+        .fromPromise(Feeds.toArray())             //take all the feeds as array
+        .flatMap(feeds => Observable.from(feeds)) //convert the array to an Observable to get 1 feed at a time
+        .flatMap(feed => fetchFeed(feed.url))
+        .flatMap(data => {
+          let feed = data.responseData.feed;
+          let entries = feed.entries.map(e => {
+            e.feedUrl = feed.url;
+            return e;
+          });
+
+          return Observable.from(entries);          //return the new Posts as an Observable
+        });                                         //which give 1 post at a time
+
+  let addNewPosts_ = newPosts_                      //we don't want to add already present posts
+        .flatMap(entry => Posts.get(entry.link))    //(dexie gives an error for that)
+        .zip(
+          newPosts_,                                //I am sure there's a better way of doing this
+          (existing, newEntry) => {                 //if you know, do tell me
+            return {existing, newEntry};
+          }
+        )
+        .flatMap(entry => {
+          if(entry.existing)
+            return Observable.empty();
+
+          return addPostToDb(entry.newEntry, entry.newEntry.feedUrl);
+        });
+
+  return addNewPosts_;
+};
+
 
 let feeds_ = Observable
       .merge(
@@ -66,4 +99,4 @@ let feeds_ = Observable
       .startWith('')
       .flatMap(() => Feeds.toArray()).share();
 
-export default {feeds_};
+export default {feeds_, fetchAllFeeds_, addFeed_};

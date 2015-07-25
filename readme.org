@@ -1,150 +1,431 @@
-* Yarr : Reactive Dexie
+* Yarr : Bring UI to Life
 
-In this step we'll make our data sources (`feeds_` and `posts_`) reactive, and we'll see how easy it is to make your own Observable.
+We'll now add functionality to all those control widgets in the Sidebar. It'll be a breeze.
 
-Take a look at ~src/models/feeds.js~. We are exporting:
+** Inter-component communication
+
+- *Filters widget*
+
+  First we'll take that `All | Unread | Read` widget. It's purpose is to filter the posts in our posts-list component by their /read/ status. Have you noticed we have a ~{read: 'true|false'}~ field in the posts that we put in our db. Also notice it's value is a string. For some reason keeping and checking booleans didn't really work out.
+
+  We want our 'filter-widget' component to communicate with our `posts-list` component. But we want them isolated and modular, remember? If we import something from one widget in other (for communication) it'll break the isolation. We don't want them to intersect. Now that we have the work "intersect" in our vocabulary, can you think of an intersection point for these two components? The `main` component, their parent, it *has* to know about both `sidebar` (filter-widget's parent) and posts-list. So if we don't want to create an intersection b/w two of our modules, we shall reuse the unavoidable intersection point we already have.
+
+  Let's draft a plan about how we're gonna filter the posts. PS: You are really dumb if my overuse of word "filter" hasn't rang any bells yet. All we have to use *filter* operator on the /feeds_/, and we know what to filer for, our only problem is the communication b/w two components. We will:
+  - create an Observable of "what to filter" from our filters-widget
+  - import it in `main` component (the common intersection point)
+  - pass it to our `posts-list` component as an argument (remember we export all our components as functions)
+  - since it's an Observable, we can consume it directly in our posts-list component chain (hence in the main chain of our app. Our app itself is a chain in case you haven't noticed yet ;)
+
+  Open up ~src/components/sidebar-feed-list.js~
+
+  #+begin_src javascript
+  // components/sidebar-feed-filter.js
+  import {dataAttrAsClass} from '../utils';
+  .
+  .
+  .
+  let feedFilters_ = () => {
+  let widgetClicks_ = clicksByClass_('filter-posts');
+
+  let filters_ = widgetClicks_
+  .map(e => e.target)
+  .map(el => dataAttrAsClass('filter', el))
+  .do(x => console.log(x));
+
+  return filters_;
+  };
+  .
+  .
+  .
+  export {feedFilters_};
+  #+end_src
+
+  That's straight forward I think. You might be wondering what that `dataAttrAsClass` is. This is what it is:
+
+  #+begin_src javascript
+  //utils.js
+  .
+  .
+  .
+  dataAttrAsClass: (attr, el) => {
+  let dataAttrs = toArray(el.classList)
+  .filter(c => c.indexOf('data-') >= 0)
+  .map(attr => {
+  let [_, key, val] = attr.split('-');
+  let res = {};
+  res[key] = val;
+  return res;
+  })[0];
+
+  return dataAttrs[attr];
+  }
+  .
+  .
+  .
+  #+end_src
+
+  I couldn't figure out how to put `data-custom=something` with our HTMLish syntax, so I added the `data-filter=all` etc like this in the markup:
+
+  #+begin_src xml
+  <li className="sidebar-control filter-posts data-filter-all">All</li>
+  <li className="sidebar-control filter-posts active data-filter-unread">Unread</li>
+  <li className="sidebar-control filter-posts data-filter-read">Read</li>
+  #+end_src
+
+  Notice ~data-filter-all~ class. That's how we get to know which filter user has clicked on. Yea it's hackish, suggest me a better way to do this. I'll appreciate it (what? you want a trophy?).
+
+  Let's import this `feedFilters_` Observable in `components/main.js` and see what it provide us:
+
+  #+begin_src javascript
+  //components/main.js
+  import {feedFilters_} from './sidebar-feed-filter';
+  .
+  .
+  feedFilters_()
+  .subscribe(x => console.log(x));
+  .
+  .
+  #+end_src
+
+  We get "read", "all" and "unread" in console on clicking the filter buttons. Interesting, let's convert it to what we want to filter:
+
+  But wait, why are we directly using `sidebar-feed-filter` in our main? main view don't need to know about it, and it should not. Besides, feed-filter's parent is sidebar, and sidebar is answerable to main, not feed-filter. So we'll import the feedFilters_ in `sidebar` first, which will export it again for main.
+
+  #+begin_src javascript
+  // components/sidebar.js
+  import {feedFilters_ as filterWidgetFilters_} from './sidebar-feed-filter';
+  .
+  .
+  .
+  let feedFilters_ = () =>
+  filterWidgetFilters_().startWith('')
+  .map(check => {
+  let filter = {};
+
+  switch(check) {
+  case 'read':
+  filter.read = 'true'; break;
+  case 'unread':
+  filter.read = 'false'; break;
+  }
+
+  return filter;
+  });
+
+
+  export default render_;
+  export {feedFilters_};
+  #+end_src
+
+  We also did some post-processing on our filters to produce what should be most easily filterable by posts-list view. We'll now import it in main from `sidebar`,
+
+  #+begin_src javascript
+  //components/main.js
+  import sidebar_, {feedFilters_} from './sidebar';
+  .
+  .
+  .
+  feedFilters_() //these two lines are for testing only. Remove them before moving ahead
+  .subscribe(x => console.log(x));
+  .
+  .
+  #+end_src
+
+  Now our feedFilters_ Observable give us ~{read: 'true|false'}|{}~, the end product that we want to filter. According to our plan, we have to pass it to `posts-list` view for consumption.
+
+  #+begin_src javascript
+  //components/main.js
+  .
+  .
+  .
+  let render_ = () => Observable.combineLatest(
+  postsList_(feedFilter_),
+  sidebar_(),
+  view
+  );
+  .
+  .
+  #+end_src
+
+  And we consume them in `components/posts-list.js`:
+
+  #+begin_src javascript
+  //components/posts-list.js
+  .
+  .
+  .
+  let render_ = (feedFilters_) =>
+  Observable
+  .combineLatest(
+  posts_,
+  feedFilters_(),
+  (posts, filters) => posts.filter(post => {
+  let result = true;
+  let checks = Object.keys(filters);
+  for(let key of checks) {
+  if(post[key] !== filters[key])
+  result = false;
+  }
+
+  return result;
+  })
+  )
+  .map(posts => posts.map(postView))
+  .map(view)
+  .startWith(view());
+
+  export default render_;
+  #+end_src
+
+  If that looks like a mess to you, well then it's sad; because it's your homework to figure out how we are doing the filtering. You better figure it out before moving ahead 'cause we are going to make it even more messier. (/Hint:/ It's not a mess)
+
+  You know what? Ideally we should be passing `posts_` as an argument to our posts-list component (and not import it). But I'll let it slip, because I want to.
+
+- *Feeds List widget*
+
+  Next we'll make feeds-list in sidebar work, because it will work very similar to the feed-filter widget. On clicking on the feed in sidebar, our posts-list should only show the posts from selected feed, so it is filtering too. If the filtering code in posts-list looked like an overkill, that's because it's extensible. We can pass it any valid object and it'll filter our feed with it.
+
+  What we are going to do now is that we'll generate a similar Observable (as from filter-feed) from feed-list, and we'll somehow combine it with feed-filter Observable. It'll give us advantage that we could keep both filters active at a time without any extra work.
+
+  #+begin_src javascript
+  // components/sidebar-feed-list.js
+  .
+  .
+  .
+  let selectedFeedUrl_ = () =>
+        clicksByClass_('sidebar-feed')
+        .do(e => e.preventDefault())
+        .map(e => e.target.href.split('/').reverse()[0] === 'all-feeds'
+             ? null
+             : e.target.href);
+
+
+  export default render_;
+  export {selectedFeedUrl_};
+  #+end_src
+
+  We have a special entry in feed-list called "All", which is to remove the selected-feed filters and show posts from all feeds.
+
+  Notice we only export Observable returning functions from our components.
+
+  Now let's import this Observable in our sidebar.js and combine it with `feedFilters_`
+
+  #+begin_src javascript
+  // components/sidebar.js
+  import {selectedFeedUrl_} from './sidebar-feed-list';
+  .
+  .
+  .
+  let feedFilters_ = () =>
+        Observable
+        .combineLatest(
+          filterWidgetFilters_().startWith(''),
+          selectedFeedUrl_().startWith(''),
+          (filter, feedUrl) => {
+            return {filter, feedUrl}
+          }
+        )
+        .map(check => {
+          let filter = {};
+
+          switch(check.filter) {
+          case 'read':
+            filter.read = 'true'; break;
+          case 'unread':
+            filter.read = 'false'; break;
+          }
+
+          if(check.feedUrl) filter.feedUrl = check.feedUrl;
+
+          return filter;
+        })
+
+
+  export default render_;
+  export {feedFilters_};
+  #+end_src
+
+  Try it out. This will give us two of our widgets working!
+
+- *Fetch All 'n Add Feed widget*
+
+For the `Fetch All Feeds` button, we need some way to re-fetch all feeds present in our db. For that we'll need to create a function in `models/feeds.js`, because it's the one responsible for this task. We'll then import this method in our component, and call it when clicks happen on our button.
 
 #+begin_src javascript
-let feeds_ = Observable
-      .fromPromise(Feeds.toArray()).share();
+// models/feeds.js
+let fetchAllFeeds_ = () => {
+  let newPosts_ = Observable
+        .fromPromise(Feeds.toArray())             //take all the feeds as array
+        .flatMap(feeds => Observable.from(feeds)) //convert the array to an Observable to get 1 feed at a time
+        .flatMap(feed => fetchFeed(feed.url))
+        .flatMap(data => {
+          let feed = data.responseData.feed;
+          let entries = feed.entries.map(e => {
+            e.feedUrl = feed.url;
+            return e;
+          });
+
+          return Observable.from(entries);          //return the new Posts as an Observable
+        });                                         //which give 1 post at a time
+
+  let addNewPosts_ = newPosts_                      //we don't want to add already present posts
+        .flatMap(entry => Posts.get(entry.link))    //(dexie gives an error for that)
+        .zip(
+          newPosts_,                                //I am sure there's a better way of doing this
+          (existing, newEntry) => {                 //if you know, do tell me
+            return {existing, newEntry};
+          }
+        )
+        .flatMap(entry => {
+          if(entry.existing)
+            return Observable.empty();
+
+          return addPostToDb(entry.newEntry, entry.newEntry.feedUrl);
+        });
+
+  return addNewPosts_;
+};
+.
+.
+.
+export default {feeds_, fetchAllFeeds_};
 #+end_src
 
-which we then use as our source for feeds across our app. Basically just returning data straight from the dexie database. Now let's formulate what our requirements are for a *reactive* data source:
+Well, I hope the code is self explanatory, and I've added comments with it, so read 'em honey. Next we need to call this method when someone clicks on `Fetch All Feeds` button. Easy!
 
-> Reactive data source should give us new data *whenever the data is added, removed or changed*
+#+begin_src javascript
+// components/sidebar-fetch-n-add-widget.js
+import {fetchAllFeeds_} from '../models/feeds';
+.
+.
+let render_ = () => {
+  let addFeedBtnClicks_ = clicksByClass_('new-feed-btn');
+  let addFeedInputStyles_ = addFeedBtnClicks_
+        .startWith(false)
+        .scan(acc => !acc)
+        .map(show => show
+             ? {display: 'inline-block'}
+             : {display: 'none' });
 
-Dexie js provide us hooks for receiving events for exactly above 3 situations: https://github.com/dfahlander/Dexie.js/wiki/Table It even has a hook for /reading/, but we're not interested in that.
-
-Now if we can convert these hooks to Observable, and merge them such that when any of the above 3 hooks fire, we re-fetch the data and make ~feeds_~ emit it again, our whole UI will update. That's what Observable are, right? Asynchronous push based collections.
-
-- *Dexie hooks -> Observable*
-
-  Let's start with making a helper function that will convert a hook into an Observable. Open up ~src/db.js~:
-
-  #+begin_src javascript
-  // db.js
-  import {Observable} from 'rx';
-  .
-  .
-  .
-  let reactiveDexieTable_ = (table, hookName) => {
-    return Observable.create((obs) => {
-      let dbListener = table.hook(hookName, (pk, obj, txn, update) => {
-        //Can't use `arguments` because webpack.
-        //there are 4 arguments for 'updating' op, otherwise there are 3.
-        //in case of 'updating' first arg is 'modifications', and other three are same
-        obs.onNext(pk, obj, txn, update);
-      });
-
-      return () => {
-        table.hook(hookName).unsubscribe(dbListener);
-      };
-    });
-
-  };
-
-  export default {
-    db,
-    Posts: db.posts,
-    Feeds: db.feeds,
-    reactiveDexieTable_
-  };
-  #+end_src
-
-  ~reactiveDexieTable_~ shall give us an Observable for listening to one of ~creating~, ~updating~, ~deleting~ hooks on a dexie table.
-
-  Creating an Observable is really simple. There's a helper method ~Observable.create~ which makes the job easier. ~Observable.create~ takes a function (call it `cb`) as argument. `cb` is given an Observer (call it `obs`) as argument. It's `cb`'s duty to call `obs`'s ~onNext~, ~onError~, ~onComplete~, when it does, that's when our resulting Observable will emit values/errors/onCompleted. `cb` shall return a function which will be called when it's time to dispose the Observable. Ideally, `cb`'s return function clears whatever resources our Observable used (it should remove event listeners it added for example).
-
-  In our case, we don't want the resulting Observable to ever complete, so we don't have an ~obs.onCompleted~ call. And we don't have an ~obs.onError~ call, because bad developers don't handle errors. What? You really thought I am a good developer? Lol! Can't believe you fell for that. Actually I do believe that, I anticipated that; you're too predictable you know. Honestly, I didn't anticipated shit, I just had to be a smartass. You know what! I actually did anticipate that, but I had to be humble. Really honestly though, I /<smack>/...okay let's proceed. /You didn't need to hit me. You prick!/
-
-- *Test reactive dexie table*
-
-  Let's do a quick test run. We'll create an Observable for listening to `creating` hook, clear all the feeds, refresh the browser and see if this Observable emits. Put this anywhere in ~src/db.js~:
-  #+begin_src javascript
-  reactiveDexieTable_(db.feeds, 'creating')
-    .do(x => console.log('WHOA! Hook is working!', x))
+  let fetchAllBtnClicks_ = clicksByClass_('fetch-all-btn');
+  fetchAllBtnClicks_
+    .flatMap(fetchAllFeeds_)
     .subscribe();
-  #+end_src
 
-  Open console in your browser, do a ~Feeds.clear()~ and ~Posts.clear()~, and refresh. If you see that =Whoa!= message, our new Observable is working. Awesome! Remove code added above.
-
-- *Cascading delete for Posts*
-
-  Let's do something little more useful. Noticed we had to clear both ~Feeds~ and ~Posts~ above (so re-adding ~Posts~ won't show an error). Keeping ~Posts~ in db don't make any sense when we've removed the `Feed` they belong to. Let's use our awesome new reactive table Observable and delete all the Posts that belong to the feed whenever we delete the feed.
-
-  #+begin_src javascript
-  .
-  .
-  .
-  //delete all posts whenever a feed is deleted from dexie db
-  reactiveDexieTable_(db.feeds, 'deleting')
-    .flatMap(feedUrl => {
-      return db.posts.where('feedUrl').equals(feedUrl).delete();
-    })
-    .subscribe(
-      x => console.log(`${x} posts deleted successfully in cascading delete operation.`),
-      e => console.error('Error while cascading Posts delete', e)
+  return Observable
+    .combineLatest(
+      addFeedInputStyles_,
+      view
     );
-  .
-  .
-  .
-  #+end_src
+}
+.
+.
+.
+#+end_src
 
-  Now go to browser's console and do a ~Feeds.clear()~ again. You'll see ~N posts deleted~ messages, and if you refresh the page, you'll see Posts are all gone.
+And we have our `Fetch All Feeds` button working.
 
-- *Reactive Feeds*
+For `Add New Feed`, we want to add a new feed when user press enter in the input box that appears when user clicks the `Add New feed` button. I am going to write down code for making this button work, but I'll not explain that code. Call it your homework. It's quite easy anyway.
 
-  That's all great, let's use this in our UI. We'll start with feeds. Open ~src/models/feeds.js~:
+We need keyup events, so upen `src/events.js`:
 
-  #+begin_src javascript
-  import {Feeds, reactiveDexieTable_} from '../db';
-  .
-  .
-  .
-  let feeds_ = Observable
-        .merge(
-          reactiveDexieTable_(Feeds, 'creating'),
-          reactiveDexieTable_(Feeds, 'updating'),
-          reactiveDexieTable_(Feeds, 'deleting')
-        )
-        .startWith('')
-        .flatMap(() => Feeds.toArray()).share();
+#+begin_src javascript
+// events.js
+import {Observable} from 'rx';
 
-  export default {feeds_};
-  #+end_src
-
-  We create 3 Observable to inform us whenever ~Feeds~ are updated, deleted or added, and we ~Observable.merge~ them so that we get a notification when either one of these events happen. Can you guess why we did ~.startWith('')~ here? Without ~startWith~, the Observable will keep waiting for one of the 3 events to happen. We don't want that, we want to send feeds to our UI on initial refresh too, so we start with an empty notification, and send feeds every time page refreshes, and then we send them every time something happens in our ~Feeds~ table.
-
-  Let's try it real quick. Open up the console in browser and do ~Feeds.clear()~. You'll see all the feeds from our feeds list in sidebar vanish. Is it awesome or what! If you refresh the page, feeds will get added back again on first refresh, however posts will not. That's expected, let's make Posts reactive too.
-
-- *Reactive Posts*
-
-  How do we make Posts reactive now? Exactly how we made Feeds reactive, dumbass!
-
-  #+begin_src javascript
-  // models/posts.js
-  import {Posts, reactiveDexieTable_} from '../db';
-  import {Observable} from 'rx';
-
-  let posts_ = Observable
-        .merge(
-          reactiveDexieTable_(Posts, 'creating'),
-          reactiveDexieTable_(Posts, 'updating'),
-          reactiveDexieTable_(Posts, 'deleting')
-        )
-        .startWith('')
-        .flatMap(() => Posts.orderBy('publishedDate').reverse().toArray());
-
-  export default {posts_};
-  #+end_src
-
-  Now if you do ~Feeds.clear()~ in console, you'll see posts-list get all cleared too, and you might also see posts getting added dynamically when you refresh the page later.
-
-  To delete a single post or feed from console, right click it in UI and /Copy Link Address/. Then in console you can do ~Posts.delete(link)~
+import {toArray} from './utils';
 
 
-Now that our offline database is reactive, bring our UI to life. In next step we'll add functionality to the control widgets in sidebar.
+let body = document.body;
+
+let clicks_ = Observable.fromEvent(body, 'click').share();
+
+let filterClassName = (className, e) => {
+  let classes = toArray(e.target.classList);
+  return classes.indexOf(className) >= 0;
+};
+
+let clicksByClass_ = (className) => clicks_
+      .filter(e => filterClassName(className, e));
+
+let keyups_ = Observable.fromEvent(body, 'keyup').share();
+
+let keyupsByClass_ = (className) =>
+      keyups_
+      .filter(e => filterClassName(className, e));
+
+export {clicksByClass_, keyupsByClass_};
+#+end_src
+
+And in ~src/components/sidebar-fetch-n-add-widget.js~:
+
+#+begin_src javascript
+// components/sidebar-fetch-n-add-widget.js
+import {clicksByClass_, keyupsByClass_} from '../events';
+import {fetchAllFeeds_, addFeed_} from '../models/feeds';
+.
+.
+let render_ = () => {
+  let addFeedBtnClicks_ = clicksByClass_('new-feed-btn');
+  let addFeedInputStyles_ = addFeedBtnClicks_
+        .startWith(false)
+        .scan(acc => !acc)
+        .map(show => show
+             ? {display: 'inline-block'}
+             : {display: 'none' });
+
+  let fetchAllBtnClicks_ = clicksByClass_('fetch-all-btn');
+  fetchAllBtnClicks_
+    .flatMap(fetchAllFeeds_)
+    .subscribe();
+
+  let addInputKeyups_ = keyupsByClass_('new-feed-input');
+  let addNewFeed_ = addInputKeyups_
+        .do(e => {
+          e.target.classList.remove('error');
+          e.target.classList.remove('progress');
+        })
+        .filter(e => e.keyCode === 13)
+        .map(e => e.target.value)
+        .flatMap(feedUrl => addFeed_(feedUrl))
+        .catch(e => {
+          let el = document.querySelector('.new-feed-input');
+          el.classList.add('error');
+
+          console.debug('Error while adding feed: ', e);
+
+          return addNewFeed_.retry();
+        });
+
+  addNewFeed_.subscribe(
+    x => console.log(x)
+  );
+
+
+  return Observable
+    .combineLatest(
+      addFeedInputStyles_,
+      view
+    );
+}
+
+export default render_;
+#+end_src
+
+And we need to export `addFeed_` from ~src/models/feeds.js~
+
+#+begin_src javascript
+// models/feeds.js
+.
+.
+.
+export default {feeds_, fetchAllFeeds_, addFeed_};
+#+end_src
+
+Noticed all the `Observable.....subscribe` chains we have where we don't handle errors responsibly? If you are feeling adventurous, feel free to create a `notifications` component and show a notification on error/progress etc. Don't forget to create a pull request.
+
+Phewww...we are ready to move to final step.
 
 #+begin_src bash
-git checkout 9-bring-ui-to-life
+git checkout 10-reader-view
 #+end_src
