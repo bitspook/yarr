@@ -1,5 +1,7 @@
+let toArray = (arrayLike) => Array.prototype.slice.call(arrayLike, 0);
+
 export default {
-  toArray: (arrayLike) => Array.prototype.slice.call(arrayLike, 0),
+  toArray: toArray,
   formatDate: (date) => {
     if(!date) return '';
 
@@ -19,4 +21,16 @@ export default {
 
     return `${day}, ${monthNames[monthIndex]}, ${year}`;
   },
+  dataAttrAsClass: (attr, el) => {
+    let dataAttrs = toArray(el.classList)
+          .filter(c => c.indexOf('data-') >= 0)
+          .map(attr => {
+            let [_, key, val] = attr.split('-');
+            let res = {};
+            res[key] = val;
+            return res;
+          })[0];
+
+    return dataAttrs[attr];
+  }
 };

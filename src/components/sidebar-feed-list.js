@@ -21,6 +21,7 @@ let view = (feedViews) =>
 let render_ = () => {
   let selectFeedClicks_ = clicksByClass_('sidebar-feed');
   selectFeedClicks_
+    .do(e => e.preventDefault())
     .do(e => {
         let activeEl = document.querySelector('.sidebar-feed.active');
         if(activeEl) activeEl.classList.remove('active');
@@ -35,4 +36,13 @@ let render_ = () => {
     .map(view);
 }
 
+let selectedFeedUrl_ = () =>
+      clicksByClass_('sidebar-feed')
+      .do(e => e.preventDefault())
+      .map(e => e.target.href.split('/').reverse()[0] === 'all-feeds'
+           ? null
+           : e.target.href);
+
+
 export default render_;
+export {selectedFeedUrl_};
