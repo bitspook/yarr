@@ -86,7 +86,7 @@ Open ~/node_modules/dexie/dist/latest/Dexie.js~, go the end, and comment out AMD
 #+end_src
 
 
-** Make Feeds offline first
+** Make Models Offline First
 So how do we actually use offline storage in our app? We'll go for `offline-first`. i.e We'll fetch the feeds, store them in IndexedDB (or let's call it dexie db), and feed our app from the dexie db. So whenever we need to update our data (feeds/posts), we first update the dexie db. /Spoiler:/ To make the interaction b/w dexieDb and our UI smoother, we'll actually make our db reactive, so that any change in our db will automatically change the UI.
 
 - *Offline first Feeds*
@@ -308,5 +308,5 @@ So how do we actually use offline storage in our app? We'll go for `offline-firs
 Awesome! With that done, we can move on to next step and try to make our database reactive. We'll aim for a functionality that whenever we add/remove/change anything in our offline database (IndexedDB that is), anything using that data (in UI or otherwise) shall respond too. I love this feature in Meteor (although Meteor's client side db is not persistent by default).
 
 #+begin_src javascript
-git checkout
+git checkout 8-reactive-dexie
 #+end_src
