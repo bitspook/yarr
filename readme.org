@@ -1,6 +1,10 @@
 * Yarr
 *Yet Another RSS Reader*
 
+*[[Live Demo][http://channikhabra.github.io/yarr/]]
+
+[[http://i.imgur.com/VdFhZFG.png]]
+
 Yarr is a small RSS reader we'll build using RxJS and ES2015 in this workshop session, with some spices:
 
 - We'll not use any JS framework
