@@ -1,7 +1,7 @@
 * Yarr
 *Yet Another RSS Reader*
 
-*[[Live Demo][http://channikhabra.github.io/yarr/]]
+*[[Live Demo][http://channikhabra.github.io/yarr/]]*
 
 [[http://i.imgur.com/VdFhZFG.png]]
 
