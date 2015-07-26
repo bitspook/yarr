@@ -1,317 +1,138 @@
-* Yarr : The Reader
+* Yarr
+*Yet Another RSS Reader*
 
-In this final part, we'll finally add the ability to read the posts. Guess where to start with it? With the click handler on the 'Title' in the posts-list.
+Yarr is a small RSS reader we'll build using RxJS and ES2015 in this workshop session, with some spices:
 
-#+begin_src javascript
-// components/posts-list.js
-import {clicksByClass_} from '../events';
-import {markPostAsRead_} from '../models/posts';
-.
-.
-.
-let readPost_ = () => {
-  let readPostClicks_ = clicksByClass_('post-title');
-  return readPostClicks_
-      .do(e => e.preventDefault())
-      .map(e => e.target.href)
-      .flatMap(link => Posts.get(link))
-      .do(markPostAsRead_)
-      .startWith('');
-}
+- We'll not use any JS framework
+- We'll use Virtual-DOM library for optimal DOM updates
+- We'll use delegated events
+- We'll use indexedDB for offline-storage of RSS feeds
 
-export default render_;
-export {readPost_};
-#+end_src
+** Objective
+*** Not using any framework
+- *Focus only on Rx*
 
-Can you guess what we are upto? We have created an Observable which will give us the url of the post to read whenever user clicks on a post's title. Remember we save posts with url as primary_key in IndexedDB, so we can fetch the post by it's url. We'll use this Observable in our reader view which we're going to create next.
+  The objective we want to achieve with this tutorial is to start thinking in terms of Observables (we'll come to them later). Using a framework would add another layer to worry about (slash learn). We wanna focus exclusively on FRP aspect of RxJS, and not let more than necessary abstractions from other systems hinder us.
 
-But, have you noticed we have functionality to filter posts by read/unread, but no mechanism to mark a post as read? We'll mark the post as read when she open the reader for a post. For that we already have put `markPostAsRead_` in above code. Now ideally we should keep this in Observable chain and handle the error when it happens, but we won't because it' 4 in the morning, I am tired and sleepy, and I heard you wanted to learn. No learning without doing pall. Don't forget to create a pull request.
+- *Come up with a sane architecture by ourself*
 
-Let's create it in ~src/models/posts.js~
+  Not really the objective, more of a wish. Let's see if we can come up with a saner architecture without stressing it too much, without relying on a framework to force our hand to do it a certain way. You've been warned, I am a 100% self-taught, don't blame me if we end up with a pile of horseshit 😛
 
-#+begin_src javascript
-let markPostAsRead_ = (post) => Posts.update(post, {read: 'true'});
-.
-.
-export default {posts_, markPostAsRead_};
-#+end_src
+- *Fun*
 
+  Let's just get out of the framework cage and take a breath in fresh air.
 
-Create a new file ~src/components/reader.js~
+*** Using Virtual DOM
+- *Focus only on FRP*
 
-#+begin_src javascript
-// components/reader.js
-import {Observable} from 'rx';
+  Virtual DOM is awesome. It can do changes in rendered DOM much more optimally with much little effort (from our end). We don't want to get into the intricacies of doing *proper* DOM manipulations during the tutorial. We only have 90 minutes and we wanna focus on thinking in Observables.
 
-let view = (post) => {
-  if(!post) return '';
+  Moreover, Virtual-DOM actually help in creating a better architecture for our app. We'll see how.
 
-  return <section className="post-container post-reader">
-  <span className="close-reader-btn">&#10094;</span>
-  <header className="post-header">
-    <ul className="post-meta-list">
-      <li className="post-meta-item">
-        <p>{formatDate(post.publishedDate)}</p>
-      </li>
+*** Using delegated events
+We'll see what they are and why we're using them later when we come to them.
 
-      <li className="post-meta-item">
-        <p itemprop="articleSection">{post.categories.join(', ')}</p>
-      </li>
-    </ul>
+At the end of the day, it's all a fun little app, and I expect you to have fun building it with me.
 
-    <h1 itemprop="name headline" className="post-title">
-    <a href={post.link} title="post.title">{post.title}</a>
-    </h1>
-  </header>
+*** Personal Reasons
+I created YARR for following personal reasons:
 
-  <div className="post-body">
-    {post.content}
-  </div>
-</section>
-}
+- For learning RxJS properly. Teaching is best learning they say, please feel at home for humbling me by pointing my mistakes in this code base
+- Trying to roll something sane without using full-fledged frameworks. Mostly to test myself if I can come up with a decent architecture without having a framework forcing my hand to do so. When I found RxJS I saw a good resource to get over a big hurdle: propagation of change in the app.
+- To Prepare workshop for jQuery-conf 2015. Now the conference went horrible, people there were simply not ready for ES6 let aside RxJS. I was kinda expecting it, so instead of just letting that prep time go to waste, I thought to make use of it and write a tutorial which might someone else on the Internet.
 
-let render () => Observable.return(view());
-#+end_src
+** How to Follow the tutorial
+I've written this tutorial using git tags for chapters. We start with basic introduction to Rx, virtual-dom and then move ahead with writing a simplistic app.
 
-That's the basic view for our reader, let's import it in `components/main.js` and put it in main view. We're going to show the reader as a popup reader which'll take over the entire page. Then we'll have a button to close the reader.
+If you just want to read the tutorial, you can do that on Github. Just go through the tags in this repo from 0 to 10.
 
-#+begin_src javascript
-// components/main.js
-import h from 'virtual-dom/h';
-import {Observable} from 'rx';
+If you want to follow along (you should):
 
-import postsList_, {readPost_} from './posts-list';
-import sidebar_, {feedFilters_} from './sidebar';
-import reader_ from './reader';
+- Clone this repo
+- Checkout to tag 0
+  #+begin_src bash
+  git checkout 0-setup
+  #+end_src
+- Copy it over to another folder where you'll write the code
+- Start with reading readme.org. It'll instruct you how to proceed
 
-let view = (postsList, sidebar, reader) =>
-      <div id='container' className='container'>
-         <div className="surface">
-           <div className="surface-container">
-             <div className="content">
-               <aside className="cover">{sidebar}</aside>
-               <div className="reader">{reader}</div>
-               <div className="wrapper">
-                 <div className="wrapper-container">{postsList}</div>
-               </div>
-             </div>
-           </div>
-         </div>
-       </div>
-  ;
+If you want to read the complete tutorial in a single document, there's also `complete-tutorial.org` committed in the final commit in which you can read all the chapters in a single document.
 
-let render_ = () => Observable.combineLatest(
-  postsList_(feedFilters_),
-  sidebar_(),
-  reader_(readPost_),
-  view
-);
+*How to run the app*
 
-export default render_;
-#+end_src
+- Clone this repo and ~cd~ to the cloned folder
+- Execute: ~npm install~
+- You might need to install ~webpack~ and ~webpack-dev-server~ globally
+  #+begin_src javascript
+  npm install webpack webpack-dev-server -g
+  #+end_src
+- To check the app in development mode, just run ~webpack-dev-server~ and it'll run a server on ~localhost:8080~
 
-Notice we also imported `readPost_` from posts-list component and we pass it to reader. Let's move back to ~src/components/reader.js~ and use it to render a reader view.
+*How to build*
 
-#+begin_src javascript
-import {Observable} from 'rx';
-import h from 'virtual-dom/h';
-import {formatDate} from '../utils';
+- After above steps, execute this command:
 
-let view = (post) => {
-  if(!post) return '';
+  #+begin_src javascript
+  NODE_ENV=production webpack -p
+  #+end_src
 
-  return <section className="post-container post-reader">
-  <span className="close-reader-btn">&#10094;</span>
-  <header className="post-header">
-    <ul className="post-meta-list">
-      <li className="post-meta-item">
-        <p>{formatDate(post.publishedDate)}</p>
-      </li>
+- Now you can simply open ~index.html~ in your browser.
 
-      <li className="post-meta-item">
-        <p itemprop="articleSection">{post.categories.join(', ')}</p>
-      </li>
-    </ul>
+** What to expect
 
-    <h1 itemprop="name headline" className="post-title">
-    <a href={post.link} title="post.title">{post.title}</a>
-    </h1>
-  </header>
+I am not expert at anything. I found RxJS couple months or so back, and I've been playing with it in my very little free time. I liked it a lot, and saw an opportunity to build something the way I wanted and I did. Keep your eyes open at all times while reading this tutorial. I don't mind if you point out some mistakes/wrong-decisions I've made, I appreciate it actually. I am a self-taught, that'll help me a lot. So please be my guest and humble me.
 
-  <div className="post-body">
-    {post.content}
-  </div>
-</section>
-}
+Other than that, here are few things this tutorial might have to offer:
 
-let render_ = (readPost_) =>
-      readPost_()
-      .startWith(false)
-      .map(view);
+- An app writing without using any frameworks
+- The whole app is a long chain of operations on Observables. We'll try to get as close as possible to a system like this: [[http://i.imgur.com/1wMthve.png]]
+  We'll fetch data from network, put it in indexedDb (the source), make it go through a long chain of operations, and put it in on the webpage (the sink).
+- Persistent offline storage with IndexedDB
+- Meteor like reactive client side db (although Meteor's client db is not persistent)
+- Easter eggs, obvious/non-obvious mistakes made on purpose and otherwise
 
-export default render_;
-#+end_src
+** Table of Contents
 
-Now if you click on a post's title, you'll see the reader view shows up, but the post is actually an HTML string, i.e there're all HTML tags etc with all those angle brackets. We need to convert this HTML string to something which virtual-dom can render as HTML (hyperscript). Also, the back button isn't really working, so we have to refresh the page to get rid of the reader. Let's make that button work first.
+- *[[https://github.com/channikhabra/yarr/tree/0-setup][Chapter 0 : Setup]]*
 
+  Just basic setup for webpack, npm packages to install etc.
 
-#+begin_src javascript
-// components/reader.js
-import {clicksByClass_} from '../events';
-.
-.
-let render_ = (readPost_) => {
-  let closeBtnClicks_ = clicksByClass_('close-reader-btn');
-  return readPost_()
-    .startWith(false)
-    .merge(closeBtnClicks_)
-    .map(postOrClick => {
-      if(postOrClick.type === 'click') return false;
-      return postOrClick;
-    })
-    .map(view);
-}
+- *[[https://github.com/channikhabra/yarr/tree/1-hello-rx][Chapter 1 : Intro to Observables]]*
 
-export default render_;
-#+end_src
+  If you're new to Rx, this chapter will act as a small introduction. It's not extensive, more of just a brush up. If you haven't heard of Rx yet, you might like going through this [[http://channikhabra.github.io/frp-with-rxjs-jschannel-conf/#/][presentation]] (with [[https://github.com/channikhabra/frp-with-rxjs-jschannel-conf/blob/master/README.org][transcript]]).
 
-This is a bit hackish, again, tell me if you have a better solution for this. Basically what we do is that we create a new view (the whole view, complete view which we give to virtual-dom for re-rendering) every time user clicks on the post title to read it, or click the close button in reader. When user click on the post title, the reader has a post to render and reader view shows up on the screen, but when user clicks on the close button, same stream (Observable) returns false, which makes the reader view an empty string (hint: the view function in components/reader.js).
+- *[[https://github.com/channikhabra/yarr/tree/2-hello-vdom][Chapter 2 : Intro to Virtual-Dom]]*
 
-I missed a small thing here. html2hscript uses json files internally, for which we need to use ~json-loader~ in webpack. Although I have ~json-loader~ configured in webpack.config.js, we still need to install it:
+  This chapter will introduce virtual-dom and we'll see how virtual-dom is used (not how it works). Again sort of brush up to bring us to same page.
 
-#+begin_src bash
-npm install json-loader --save-dev
-#+end_src
+- *[[https://github.com/channikhabra/yarr/tree/3-renderer][Chapter 3 : Components and Rendering System]]*
 
-Finally lets parse that html string we get from RSS feed to hyperscript. For this we've installed html2hscript node module.
+  I like React and the it allows writing code in terms of isolated components. That's the API we kinda-sorta try to achieve in this tutorial, and I think we get success to a fair length. We'll set a very slim rendering system, and some conventions about how we'll write our views as components and how we'll try to keep them isolated.
 
-#+begin_src javascript
-// components/reader.js
-import htmlParser from 'html2hscript';
-.
-.
-#+end_src
+- *[[https://github.com/channikhabra/yarr/tree/4-delegated-events][Chapter 4 : Delegated Events]]*
 
-~htmlParser~ here is a node callback. We need to convert it to an Observable (yea we can do that, I told you in the start I think. FYI you're annoying me now) so we can use it in our chain.
+  I don't like React's way of doing events (not that it's wrong, I just don't like it very much). So we'll do something very stupid and set a ridiculously simple (equally stupid) system for handing events in our app. Although stupid, this system will serve us well throughout the app.
 
-#+begin_src javascript
-// components/reader.js
-.
-.
-.
-let render_ = (readPost_) => {
-  let closeBtnClicks_ = clicksByClass_('close-reader-btn');
-  let htmlParser_ = Observable.fromNodeCallback(htmlParser);
-  let posts_ = readPost_().share();
-.
-.
-.
-#+end_src
+- *[[https://github.com/channikhabra/yarr/tree/5-fetch-feeds-and-styles][Chapter 5 : Fetching Feeds and Styles]]*
 
-~htmlParser_~ will now take an HTML string and will give us an Observable that return the result. And how do we get a value out of an Observable in the chain? Yup, flatMap.
+  This will be an easy one, title is self explanatory I think.
 
-#+begin_src javascript
-// components/reader.js
+- *[[https://github.com/channikhabra/yarr/tree/6-sidebar-controls-and-models][Chapter 6 : Models and Sidebar Controls]]*
 
-let render_ = (readPost_) => {
-  let closeBtnClicks_ = clicksByClass_('close-reader-btn');
-  let htmlParser_ = Observable.fromNodeCallback(htmlParser);
-  let posts_ = readPost_().share();
+  We'll keep our data in kinda-sorta models, and we'll add components for interacting with the app.
 
-  return posts_
-    .flatMap(post => {
-      if(!post) return Observable.return('');
-      post.content = `<div class="reader-post-wrapper">${post.content}</div>`;
-      return htmlParser_(post.content)
-    })
-.
-.
-.
-#+end_src
+- *[[https://github.com/channikhabra/yarr/tree/7-offline-storage-with-dexiejs][Chapter 7 : Offline Storage with Dexie.js]]*
 
-But we don't want the content only, we want to complete post object. Let's zip the content back in the post. Other than that, ~htmlParser~ don't really give us hyperscript as javascript objects, it give use hyperscript as string. We need to ~eval~ it. Yea I said `zip` 'em. I think there must be a better way of doing this, please let me know if you know the better way.
+  We'll use dexie.js for using IndexedDB for making our app offline compatible. Dexie is a slim abstraction over IndexdDB. We'll take an offline first approach to build our app.
 
-#+begin_src javascript
-// components/reader.js
-let render_ = (readPost_) => {
-  let closeBtnClicks_ = clicksByClass_('close-reader-btn');
-  let htmlParser_ = Observable.fromNodeCallback(htmlParser);
-  let posts_ = readPost_().share();
+- *[[https://github.com/channikhabra/yarr/tree/8-reactive-dexie][Chapter 8 : Making Dexie.js reactive]]*
 
-  return posts_
-    .flatMap(post => {
-      if(!post) return Observable.return('');
-      post.content = `<div class="reader-post-wrapper">${post.content}</div>`;
-      return htmlParser_(post.content)
-    })
-    .zip(
-      posts_,
-      (vContent, post) => {
-        if(!post) return post;
+  I do a lot of work with Meteor.js, and I love the way it provides a kind of database on the client which is *reactive*. Reactive like you just change the data in the database, and UI (or whatever else) who's using that data will respond to the change. That's what we'll try to achieve in this chapter. e.g we'll just put feeds in our IndexedDB and they'll show up in UI automagically.
 
-        //this is a hack. the htmlParser produces a string, when needs to be `eval`ed with `h` in scope. So.
-        window.h = h;
-        let newContent = eval(vContent)
-        post.content = newContent;
-        return post;
-      }
-    )
-.
-.
-.
-#+end_src
+- *[[https://github.com/channikhabra/yarr/tree/9-bring-ui-to-life][Chapter 9 : Bring UI to Life]]*
 
-The complete ~render_~  looks like this:
+  We'll make the controls we add in Chapter 6 actually work.
 
-#+begin_src javascript
-.
-.
-.
-let render_ = (readPost_) => {
-  let closeBtnClicks_ = clicksByClass_('close-reader-btn');
-  let htmlParser_ = Observable.fromNodeCallback(htmlParser);
-  let posts_ = readPost_().share();
+- *[[https://github.com/channikhabra/yarr/tree/10-reader-view][Chapter 10 : The Reader]]*
 
-  return posts_
-    .flatMap(post => {
-      if(!post) return Observable.return('');
-      post.content = `<div class="reader-post-wrapper">${post.content}</div>`;
-      return htmlParser_(post.content)
-    })
-    .zip(
-      posts_,
-      (vContent, post) => {
-        if(!post) return post;
-
-        //this is a hack. the htmlParser produces a string, when needs to be `eval`ed with `h` in scope. So.
-        window.h = h;
-        let newContent = eval(vContent)
-        post.content = newContent;
-        return post;
-      }
-    )
-    .merge(closeBtnClicks_)
-    .map(postOrClick => {
-      if(postOrClick.type === 'click') return false;
-      return postOrClick;
-    })
-    .startWith(false)
-    .map(view);
-}
-
-export default render_;
-#+end_src
-
-This might not be too straightforward to understand (or perhaps it is), but I am certain there is cleaner way of doing this.
-
-This is the end of our tutorial. We now have a fully functional RSS reader with few features missing.
-
-
-*Missing Features*
-
-- Ability to remove a Feed
-- Showing error/progress notifications
-
-There might be more I've forgotten. Best way of learning is to do something. This is the reason I built this app. I don't know if anyone is going to read this tutorial, but I'm being optimistic and leaving these two features un-done in hope of seeing some pull requests.
-
-Hope you enjoyed the ride.
+  The final piece of the puzzle. We'll create a component which'll parse HTML strings provided by our RSS feed to what virtual-dom understands (hyperscript), and show it in an elegant manner.
