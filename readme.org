@@ -177,6 +177,12 @@ export default render_;
 
 This is a bit hackish, again, tell me if you have a better solution for this. Basically what we do is that we create a new view (the whole view, complete view which we give to virtual-dom for re-rendering) every time user clicks on the post title to read it, or click the close button in reader. When user click on the post title, the reader has a post to render and reader view shows up on the screen, but when user clicks on the close button, same stream (Observable) returns false, which makes the reader view an empty string (hint: the view function in components/reader.js).
 
+I missed a small thing here. html2hscript uses json files internally, for which we need to use ~json-loader~ in webpack. Although I have ~json-loader~ configured in webpack.config.js, we still need to install it:
+
+#+begin_src bash
+npm install json-loader --save-dev
+#+end_src
+
 Finally lets parse that html string we get from RSS feed to hyperscript. For this we've installed html2hscript node module.
 
 #+begin_src javascript
