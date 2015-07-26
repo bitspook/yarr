@@ -3,6 +3,8 @@ import {Observable} from 'rx';
 
 import {posts_} from '../models/posts';
 import {formatDate} from '../utils';
+import {clicksByClass_} from '../events';
+import {markPostAsRead_} from '../models/posts';
 
 let postView = (post) =>
     <article className="post-item post">
@@ -40,8 +42,7 @@ let view = (postViews) =>
     {postViews}
   </section>;
 
-let render_ = (feedFilters_) =>
-      Observable
+let render_ = (feedFilters_) => Observable
       .combineLatest(
         posts_,
         feedFilters_(),
@@ -60,4 +61,16 @@ let render_ = (feedFilters_) =>
       .map(view)
       .startWith(view());
 
+let readPost_ = () => {
+  let readPostClicks_ = clicksByClass_('post-title');
+  let posts_ = readPostClicks_
+        .do(e => e.preventDefault())
+        .map(e => e.target.href)
+        .flatMap(link => Posts.get(link))
+        .do(markPostAsRead_);
+
+  return posts_;
+}
+
 export default render_;
+export {readPost_};
