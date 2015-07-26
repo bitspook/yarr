@@ -5,46 +5,6 @@
 
 [[http://i.imgur.com/VdFhZFG.png]]
 
-Yarr is a small RSS reader we'll build using RxJS and ES2015 in this workshop session, with some spices:
-
-- We'll not use any JS framework
-- We'll use Virtual-DOM library for optimal DOM updates
-- We'll use delegated events
-- We'll use indexedDB for offline-storage of RSS feeds
-
-** Objective
-*** Not using any framework
-- *Focus only on Rx*
-
-  The objective we want to achieve with this tutorial is to start thinking in terms of Observables (we'll come to them later). Using a framework would add another layer to worry about (slash learn). We wanna focus exclusively on FRP aspect of RxJS, and not let more than necessary abstractions from other systems hinder us.
-
-- *Come up with a sane architecture by ourself*
-
-  Not really the objective, more of a wish. Let's see if we can come up with a saner architecture without stressing it too much, without relying on a framework to force our hand to do it a certain way. You've been warned, I am a 100% self-taught, don't blame me if we end up with a pile of horseshit 😛
-
-- *Fun*
-
-  Let's just get out of the framework cage and take a breath in fresh air.
-
-*** Using Virtual DOM
-- *Focus only on FRP*
-
-  Virtual DOM is awesome. It can do changes in rendered DOM much more optimally with much little effort (from our end). We don't want to get into the intricacies of doing *proper* DOM manipulations during the tutorial. We only have 90 minutes and we wanna focus on thinking in Observables.
-
-  Moreover, Virtual-DOM actually help in creating a better architecture for our app. We'll see how.
-
-*** Using delegated events
-We'll see what they are and why we're using them later when we come to them.
-
-At the end of the day, it's all a fun little app, and I expect you to have fun building it with me.
-
-*** Personal Reasons
-I created YARR for following personal reasons:
-
-- For learning RxJS properly. Teaching is best learning they say, please feel at home for humbling me by pointing my mistakes in this code base
-- Trying to roll something sane without using full-fledged frameworks. Mostly to test myself if I can come up with a decent architecture without having a framework forcing my hand to do so. When I found RxJS I saw a good resource to get over a big hurdle: propagation of change in the app.
-- To Prepare workshop for jQuery-conf 2015. Now the conference went horrible, people there were simply not ready for ES6 let aside RxJS. I was kinda expecting it, so instead of just letting that prep time go to waste, I thought to make use of it and write a tutorial which might someone else on the Internet.
-
 ** How to Follow the tutorial
 I've written this tutorial using git tags for chapters. We start with basic introduction to Rx, virtual-dom and then move ahead with writing a simplistic app.
 
@@ -82,11 +42,7 @@ If you want to read the complete tutorial in a single document, there's also `co
 
 - Now you can simply open ~index.html~ in your browser.
 
-** What to expect
-
-I am not expert at anything. I found RxJS couple months or so back, and I've been playing with it in my very little free time. I liked it a lot, and saw an opportunity to build something the way I wanted and I did. Keep your eyes open at all times while reading this tutorial. I don't mind if you point out some mistakes/wrong-decisions I've made, I appreciate it actually. I am a self-taught, that'll help me a lot. So please be my guest and humble me.
-
-Other than that, here are few things this tutorial might have to offer:
+Here are few things this tutorial might have to offer:
 
 - An app writing without using any frameworks
 - The whole app is a long chain of operations on Observables. We'll try to get as close as possible to a system like this: [[http://i.imgur.com/1wMthve.png]]
