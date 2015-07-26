@@ -1,431 +1,311 @@
-* Yarr : Bring UI to Life
+* Yarr : The Reader
 
-We'll now add functionality to all those control widgets in the Sidebar. It'll be a breeze.
-
-** Inter-component communication
-
-- *Filters widget*
-
-  First we'll take that `All | Unread | Read` widget. It's purpose is to filter the posts in our posts-list component by their /read/ status. Have you noticed we have a ~{read: 'true|false'}~ field in the posts that we put in our db. Also notice it's value is a string. For some reason keeping and checking booleans didn't really work out.
-
-  We want our 'filter-widget' component to communicate with our `posts-list` component. But we want them isolated and modular, remember? If we import something from one widget in other (for communication) it'll break the isolation. We don't want them to intersect. Now that we have the work "intersect" in our vocabulary, can you think of an intersection point for these two components? The `main` component, their parent, it *has* to know about both `sidebar` (filter-widget's parent) and posts-list. So if we don't want to create an intersection b/w two of our modules, we shall reuse the unavoidable intersection point we already have.
-
-  Let's draft a plan about how we're gonna filter the posts. PS: You are really dumb if my overuse of word "filter" hasn't rang any bells yet. All we have to use *filter* operator on the /feeds_/, and we know what to filer for, our only problem is the communication b/w two components. We will:
-  - create an Observable of "what to filter" from our filters-widget
-  - import it in `main` component (the common intersection point)
-  - pass it to our `posts-list` component as an argument (remember we export all our components as functions)
-  - since it's an Observable, we can consume it directly in our posts-list component chain (hence in the main chain of our app. Our app itself is a chain in case you haven't noticed yet ;)
-
-  Open up ~src/components/sidebar-feed-list.js~
-
-  #+begin_src javascript
-  // components/sidebar-feed-filter.js
-  import {dataAttrAsClass} from '../utils';
-  .
-  .
-  .
-  let feedFilters_ = () => {
-  let widgetClicks_ = clicksByClass_('filter-posts');
-
-  let filters_ = widgetClicks_
-  .map(e => e.target)
-  .map(el => dataAttrAsClass('filter', el))
-  .do(x => console.log(x));
-
-  return filters_;
-  };
-  .
-  .
-  .
-  export {feedFilters_};
-  #+end_src
-
-  That's straight forward I think. You might be wondering what that `dataAttrAsClass` is. This is what it is:
-
-  #+begin_src javascript
-  //utils.js
-  .
-  .
-  .
-  dataAttrAsClass: (attr, el) => {
-  let dataAttrs = toArray(el.classList)
-  .filter(c => c.indexOf('data-') >= 0)
-  .map(attr => {
-  let [_, key, val] = attr.split('-');
-  let res = {};
-  res[key] = val;
-  return res;
-  })[0];
-
-  return dataAttrs[attr];
-  }
-  .
-  .
-  .
-  #+end_src
-
-  I couldn't figure out how to put `data-custom=something` with our HTMLish syntax, so I added the `data-filter=all` etc like this in the markup:
-
-  #+begin_src xml
-  <li className="sidebar-control filter-posts data-filter-all">All</li>
-  <li className="sidebar-control filter-posts active data-filter-unread">Unread</li>
-  <li className="sidebar-control filter-posts data-filter-read">Read</li>
-  #+end_src
-
-  Notice ~data-filter-all~ class. That's how we get to know which filter user has clicked on. Yea it's hackish, suggest me a better way to do this. I'll appreciate it (what? you want a trophy?).
-
-  Let's import this `feedFilters_` Observable in `components/main.js` and see what it provide us:
-
-  #+begin_src javascript
-  //components/main.js
-  import {feedFilters_} from './sidebar-feed-filter';
-  .
-  .
-  feedFilters_()
-  .subscribe(x => console.log(x));
-  .
-  .
-  #+end_src
-
-  We get "read", "all" and "unread" in console on clicking the filter buttons. Interesting, let's convert it to what we want to filter:
-
-  But wait, why are we directly using `sidebar-feed-filter` in our main? main view don't need to know about it, and it should not. Besides, feed-filter's parent is sidebar, and sidebar is answerable to main, not feed-filter. So we'll import the feedFilters_ in `sidebar` first, which will export it again for main.
-
-  #+begin_src javascript
-  // components/sidebar.js
-  import {feedFilters_ as filterWidgetFilters_} from './sidebar-feed-filter';
-  .
-  .
-  .
-  let feedFilters_ = () =>
-  filterWidgetFilters_().startWith('')
-  .map(check => {
-  let filter = {};
-
-  switch(check) {
-  case 'read':
-  filter.read = 'true'; break;
-  case 'unread':
-  filter.read = 'false'; break;
-  }
-
-  return filter;
-  });
-
-
-  export default render_;
-  export {feedFilters_};
-  #+end_src
-
-  We also did some post-processing on our filters to produce what should be most easily filterable by posts-list view. We'll now import it in main from `sidebar`,
-
-  #+begin_src javascript
-  //components/main.js
-  import sidebar_, {feedFilters_} from './sidebar';
-  .
-  .
-  .
-  feedFilters_() //these two lines are for testing only. Remove them before moving ahead
-  .subscribe(x => console.log(x));
-  .
-  .
-  #+end_src
-
-  Now our feedFilters_ Observable give us ~{read: 'true|false'}|{}~, the end product that we want to filter. According to our plan, we have to pass it to `posts-list` view for consumption.
-
-  #+begin_src javascript
-  //components/main.js
-  .
-  .
-  .
-  let render_ = () => Observable.combineLatest(
-  postsList_(feedFilter_),
-  sidebar_(),
-  view
-  );
-  .
-  .
-  #+end_src
-
-  And we consume them in `components/posts-list.js`:
-
-  #+begin_src javascript
-  //components/posts-list.js
-  .
-  .
-  .
-  let render_ = (feedFilters_) =>
-  Observable
-  .combineLatest(
-  posts_,
-  feedFilters_(),
-  (posts, filters) => posts.filter(post => {
-  let result = true;
-  let checks = Object.keys(filters);
-  for(let key of checks) {
-  if(post[key] !== filters[key])
-  result = false;
-  }
-
-  return result;
-  })
-  )
-  .map(posts => posts.map(postView))
-  .map(view)
-  .startWith(view());
-
-  export default render_;
-  #+end_src
-
-  If that looks like a mess to you, well then it's sad; because it's your homework to figure out how we are doing the filtering. You better figure it out before moving ahead 'cause we are going to make it even more messier. (/Hint:/ It's not a mess)
-
-  You know what? Ideally we should be passing `posts_` as an argument to our posts-list component (and not import it). But I'll let it slip, because I want to.
-
-- *Feeds List widget*
-
-  Next we'll make feeds-list in sidebar work, because it will work very similar to the feed-filter widget. On clicking on the feed in sidebar, our posts-list should only show the posts from selected feed, so it is filtering too. If the filtering code in posts-list looked like an overkill, that's because it's extensible. We can pass it any valid object and it'll filter our feed with it.
-
-  What we are going to do now is that we'll generate a similar Observable (as from filter-feed) from feed-list, and we'll somehow combine it with feed-filter Observable. It'll give us advantage that we could keep both filters active at a time without any extra work.
-
-  #+begin_src javascript
-  // components/sidebar-feed-list.js
-  .
-  .
-  .
-  let selectedFeedUrl_ = () =>
-        clicksByClass_('sidebar-feed')
-        .do(e => e.preventDefault())
-        .map(e => e.target.href.split('/').reverse()[0] === 'all-feeds'
-             ? null
-             : e.target.href);
-
-
-  export default render_;
-  export {selectedFeedUrl_};
-  #+end_src
-
-  We have a special entry in feed-list called "All", which is to remove the selected-feed filters and show posts from all feeds.
-
-  Notice we only export Observable returning functions from our components.
-
-  Now let's import this Observable in our sidebar.js and combine it with `feedFilters_`
-
-  #+begin_src javascript
-  // components/sidebar.js
-  import {selectedFeedUrl_} from './sidebar-feed-list';
-  .
-  .
-  .
-  let feedFilters_ = () =>
-        Observable
-        .combineLatest(
-          filterWidgetFilters_().startWith(''),
-          selectedFeedUrl_().startWith(''),
-          (filter, feedUrl) => {
-            return {filter, feedUrl}
-          }
-        )
-        .map(check => {
-          let filter = {};
-
-          switch(check.filter) {
-          case 'read':
-            filter.read = 'true'; break;
-          case 'unread':
-            filter.read = 'false'; break;
-          }
-
-          if(check.feedUrl) filter.feedUrl = check.feedUrl;
-
-          return filter;
-        })
-
-
-  export default render_;
-  export {feedFilters_};
-  #+end_src
-
-  Try it out. This will give us two of our widgets working!
-
-- *Fetch All 'n Add Feed widget*
-
-For the `Fetch All Feeds` button, we need some way to re-fetch all feeds present in our db. For that we'll need to create a function in `models/feeds.js`, because it's the one responsible for this task. We'll then import this method in our component, and call it when clicks happen on our button.
+In this final part, we'll finally add the ability to read the posts. Guess where to start with it? With the click handler on the 'Title' in the posts-list.
 
 #+begin_src javascript
-// models/feeds.js
-let fetchAllFeeds_ = () => {
-  let newPosts_ = Observable
-        .fromPromise(Feeds.toArray())             //take all the feeds as array
-        .flatMap(feeds => Observable.from(feeds)) //convert the array to an Observable to get 1 feed at a time
-        .flatMap(feed => fetchFeed(feed.url))
-        .flatMap(data => {
-          let feed = data.responseData.feed;
-          let entries = feed.entries.map(e => {
-            e.feedUrl = feed.url;
-            return e;
-          });
-
-          return Observable.from(entries);          //return the new Posts as an Observable
-        });                                         //which give 1 post at a time
-
-  let addNewPosts_ = newPosts_                      //we don't want to add already present posts
-        .flatMap(entry => Posts.get(entry.link))    //(dexie gives an error for that)
-        .zip(
-          newPosts_,                                //I am sure there's a better way of doing this
-          (existing, newEntry) => {                 //if you know, do tell me
-            return {existing, newEntry};
-          }
-        )
-        .flatMap(entry => {
-          if(entry.existing)
-            return Observable.empty();
-
-          return addPostToDb(entry.newEntry, entry.newEntry.feedUrl);
-        });
-
-  return addNewPosts_;
-};
+// components/posts-list.js
+import {clicksByClass_} from '../events';
+import {markPostAsRead_} from '../models/posts';
 .
 .
 .
-export default {feeds_, fetchAllFeeds_};
-#+end_src
-
-Well, I hope the code is self explanatory, and I've added comments with it, so read 'em honey. Next we need to call this method when someone clicks on `Fetch All Feeds` button. Easy!
-
-#+begin_src javascript
-// components/sidebar-fetch-n-add-widget.js
-import {fetchAllFeeds_} from '../models/feeds';
-.
-.
-let render_ = () => {
-  let addFeedBtnClicks_ = clicksByClass_('new-feed-btn');
-  let addFeedInputStyles_ = addFeedBtnClicks_
-        .startWith(false)
-        .scan(acc => !acc)
-        .map(show => show
-             ? {display: 'inline-block'}
-             : {display: 'none' });
-
-  let fetchAllBtnClicks_ = clicksByClass_('fetch-all-btn');
-  fetchAllBtnClicks_
-    .flatMap(fetchAllFeeds_)
-    .subscribe();
-
-  return Observable
-    .combineLatest(
-      addFeedInputStyles_,
-      view
-    );
+let readPost_ = () => {
+  let readPostClicks_ = clicksByClass_('post-title');
+  return readPostClicks_
+      .do(e => e.preventDefault())
+      .map(e => e.target.href)
+      .flatMap(link => Posts.get(link))
+      .do(markPostAsRead_)
+      .startWith('');
 }
-.
-.
-.
+
+export default render_;
+export {readPost_};
 #+end_src
 
-And we have our `Fetch All Feeds` button working.
+Can you guess what we are upto? We have created an Observable which will give us the url of the post to read whenever user clicks on a post's title. Remember we save posts with url as primary_key in IndexedDB, so we can fetch the post by it's url. We'll use this Observable in our reader view which we're going to create next.
 
-For `Add New Feed`, we want to add a new feed when user press enter in the input box that appears when user clicks the `Add New feed` button. I am going to write down code for making this button work, but I'll not explain that code. Call it your homework. It's quite easy anyway.
+But, have you noticed we have functionality to filter posts by read/unread, but no mechanism to mark a post as read? We'll mark the post as read when she open the reader for a post. For that we already have put `markPostAsRead_` in above code. Now ideally we should keep this in Observable chain and handle the error when it happens, but we won't because it' 4 in the morning, I am tired and sleepy, and I heard you wanted to learn. No learning without doing pall. Don't forget to create a pull request.
 
-We need keyup events, so upen `src/events.js`:
+Let's create it in ~src/models/posts.js~
 
 #+begin_src javascript
-// events.js
+let markPostAsRead_ = (post) => Posts.update(post, {read: 'true'});
+.
+.
+export default {posts_, markPostAsRead_};
+#+end_src
+
+
+Create a new file ~src/components/reader.js~
+
+#+begin_src javascript
+// components/reader.js
 import {Observable} from 'rx';
 
-import {toArray} from './utils';
+let view = (post) => {
+  if(!post) return '';
 
+  return <section className="post-container post-reader">
+  <span className="close-reader-btn">&#10094;</span>
+  <header className="post-header">
+    <ul className="post-meta-list">
+      <li className="post-meta-item">
+        <p>{formatDate(post.publishedDate)}</p>
+      </li>
 
-let body = document.body;
+      <li className="post-meta-item">
+        <p itemprop="articleSection">{post.categories.join(', ')}</p>
+      </li>
+    </ul>
 
-let clicks_ = Observable.fromEvent(body, 'click').share();
+    <h1 itemprop="name headline" className="post-title">
+    <a href={post.link} title="post.title">{post.title}</a>
+    </h1>
+  </header>
 
-let filterClassName = (className, e) => {
-  let classes = toArray(e.target.classList);
-  return classes.indexOf(className) >= 0;
-};
+  <div className="post-body">
+    {post.content}
+  </div>
+</section>
+}
 
-let clicksByClass_ = (className) => clicks_
-      .filter(e => filterClassName(className, e));
-
-let keyups_ = Observable.fromEvent(body, 'keyup').share();
-
-let keyupsByClass_ = (className) =>
-      keyups_
-      .filter(e => filterClassName(className, e));
-
-export {clicksByClass_, keyupsByClass_};
+let render () => Observable.return(view());
 #+end_src
 
-And in ~src/components/sidebar-fetch-n-add-widget.js~:
+That's the basic view for our reader, let's import it in `components/main.js` and put it in main view. We're going to show the reader as a popup reader which'll take over the entire page. Then we'll have a button to close the reader.
 
 #+begin_src javascript
-// components/sidebar-fetch-n-add-widget.js
-import {clicksByClass_, keyupsByClass_} from '../events';
-import {fetchAllFeeds_, addFeed_} from '../models/feeds';
+// components/main.js
+import h from 'virtual-dom/h';
+import {Observable} from 'rx';
+
+import postsList_, {readPost_} from './posts-list';
+import sidebar_, {feedFilters_} from './sidebar';
+import reader_ from './reader';
+
+let view = (postsList, sidebar, reader) =>
+      <div id='container' className='container'>
+         <div className="surface">
+           <div className="surface-container">
+             <div className="content">
+               <aside className="cover">{sidebar}</aside>
+               <div className="reader">{reader}</div>
+               <div className="wrapper">
+                 <div className="wrapper-container">{postsList}</div>
+               </div>
+             </div>
+           </div>
+         </div>
+       </div>
+  ;
+
+let render_ = () => Observable.combineLatest(
+  postsList_(feedFilters_),
+  sidebar_(),
+  reader_(readPost_),
+  view
+);
+
+export default render_;
+#+end_src
+
+Notice we also imported `readPost_` from posts-list component and we pass it to reader. Let's move back to ~src/components/reader.js~ and use it to render a reader view.
+
+#+begin_src javascript
+import {Observable} from 'rx';
+import h from 'virtual-dom/h';
+import {formatDate} from '../utils';
+
+let view = (post) => {
+  if(!post) return '';
+
+  return <section className="post-container post-reader">
+  <span className="close-reader-btn">&#10094;</span>
+  <header className="post-header">
+    <ul className="post-meta-list">
+      <li className="post-meta-item">
+        <p>{formatDate(post.publishedDate)}</p>
+      </li>
+
+      <li className="post-meta-item">
+        <p itemprop="articleSection">{post.categories.join(', ')}</p>
+      </li>
+    </ul>
+
+    <h1 itemprop="name headline" className="post-title">
+    <a href={post.link} title="post.title">{post.title}</a>
+    </h1>
+  </header>
+
+  <div className="post-body">
+    {post.content}
+  </div>
+</section>
+}
+
+let render_ = (readPost_) =>
+      readPost_()
+      .startWith(false)
+      .map(view);
+
+export default render_;
+#+end_src
+
+Now if you click on a post's title, you'll see the reader view shows up, but the post is actually an HTML string, i.e there're all HTML tags etc with all those angle brackets. We need to convert this HTML string to something which virtual-dom can render as HTML (hyperscript). Also, the back button isn't really working, so we have to refresh the page to get rid of the reader. Let's make that button work first.
+
+
+#+begin_src javascript
+// components/reader.js
+import {clicksByClass_} from '../events';
 .
 .
-let render_ = () => {
-  let addFeedBtnClicks_ = clicksByClass_('new-feed-btn');
-  let addFeedInputStyles_ = addFeedBtnClicks_
-        .startWith(false)
-        .scan(acc => !acc)
-        .map(show => show
-             ? {display: 'inline-block'}
-             : {display: 'none' });
-
-  let fetchAllBtnClicks_ = clicksByClass_('fetch-all-btn');
-  fetchAllBtnClicks_
-    .flatMap(fetchAllFeeds_)
-    .subscribe();
-
-  let addInputKeyups_ = keyupsByClass_('new-feed-input');
-  let addNewFeed_ = addInputKeyups_
-        .do(e => {
-          e.target.classList.remove('error');
-          e.target.classList.remove('progress');
-        })
-        .filter(e => e.keyCode === 13)
-        .map(e => e.target.value)
-        .flatMap(feedUrl => addFeed_(feedUrl))
-        .catch(e => {
-          let el = document.querySelector('.new-feed-input');
-          el.classList.add('error');
-
-          console.debug('Error while adding feed: ', e);
-
-          return addNewFeed_.retry();
-        });
-
-  addNewFeed_.subscribe(
-    x => console.log(x)
-  );
-
-
-  return Observable
-    .combineLatest(
-      addFeedInputStyles_,
-      view
-    );
+let render_ = (readPost_) => {
+  let closeBtnClicks_ = clicksByClass_('close-reader-btn');
+  return readPost_()
+    .startWith(false)
+    .merge(closeBtnClicks_)
+    .map(postOrClick => {
+      if(postOrClick.type === 'click') return false;
+      return postOrClick;
+    })
+    .map(view);
 }
 
 export default render_;
 #+end_src
 
-And we need to export `addFeed_` from ~src/models/feeds.js~
+This is a bit hackish, again, tell me if you have a better solution for this. Basically what we do is that we create a new view (the whole view, complete view which we give to virtual-dom for re-rendering) every time user clicks on the post title to read it, or click the close button in reader. When user click on the post title, the reader has a post to render and reader view shows up on the screen, but when user clicks on the close button, same stream (Observable) returns false, which makes the reader view an empty string (hint: the view function in components/reader.js).
+
+Finally lets parse that html string we get from RSS feed to hyperscript. For this we've installed html2hscript node module.
 
 #+begin_src javascript
-// models/feeds.js
+// components/reader.js
+import htmlParser from 'html2hscript';
 .
 .
-.
-export default {feeds_, fetchAllFeeds_, addFeed_};
 #+end_src
 
-Noticed all the `Observable.....subscribe` chains we have where we don't handle errors responsibly? If you are feeling adventurous, feel free to create a `notifications` component and show a notification on error/progress etc. Don't forget to create a pull request.
+~htmlParser~ here is a node callback. We need to convert it to an Observable (yea we can do that, I told you in the start I think. FYI you're annoying me now) so we can use it in our chain.
 
-Phewww...we are ready to move to final step.
-
-#+begin_src bash
-git checkout 10-reader-view
+#+begin_src javascript
+// components/reader.js
+.
+.
+.
+let render_ = (readPost_) => {
+  let closeBtnClicks_ = clicksByClass_('close-reader-btn');
+  let htmlParser_ = Observable.fromNodeCallback(htmlParser);
+  let posts_ = readPost_().share();
+.
+.
+.
 #+end_src
+
+~htmlParser_~ will now take an HTML string and will give us an Observable that return the result. And how do we get a value out of an Observable in the chain? Yup, flatMap.
+
+#+begin_src javascript
+// components/reader.js
+
+let render_ = (readPost_) => {
+  let closeBtnClicks_ = clicksByClass_('close-reader-btn');
+  let htmlParser_ = Observable.fromNodeCallback(htmlParser);
+  let posts_ = readPost_().share();
+
+  return posts_
+    .flatMap(post => {
+      if(!post) return Observable.return('');
+      post.content = `<div class="reader-post-wrapper">${post.content}</div>`;
+      return htmlParser_(post.content)
+    })
+.
+.
+.
+#+end_src
+
+But we don't want the content only, we want to complete post object. Let's zip the content back in the post. Other than that, ~htmlParser~ don't really give us hyperscript as javascript objects, it give use hyperscript as string. We need to ~eval~ it. Yea I said `zip` 'em. I think there must be a better way of doing this, please let me know if you know the better way.
+
+#+begin_src javascript
+// components/reader.js
+let render_ = (readPost_) => {
+  let closeBtnClicks_ = clicksByClass_('close-reader-btn');
+  let htmlParser_ = Observable.fromNodeCallback(htmlParser);
+  let posts_ = readPost_().share();
+
+  return posts_
+    .flatMap(post => {
+      if(!post) return Observable.return('');
+      post.content = `<div class="reader-post-wrapper">${post.content}</div>`;
+      return htmlParser_(post.content)
+    })
+    .zip(
+      posts_,
+      (vContent, post) => {
+        if(!post) return post;
+
+        //this is a hack. the htmlParser produces a string, when needs to be `eval`ed with `h` in scope. So.
+        window.h = h;
+        let newContent = eval(vContent)
+        post.content = newContent;
+        return post;
+      }
+    )
+.
+.
+.
+#+end_src
+
+The complete ~render_~  looks like this:
+
+#+begin_src javascript
+.
+.
+.
+let render_ = (readPost_) => {
+  let closeBtnClicks_ = clicksByClass_('close-reader-btn');
+  let htmlParser_ = Observable.fromNodeCallback(htmlParser);
+  let posts_ = readPost_().share();
+
+  return posts_
+    .flatMap(post => {
+      if(!post) return Observable.return('');
+      post.content = `<div class="reader-post-wrapper">${post.content}</div>`;
+      return htmlParser_(post.content)
+    })
+    .zip(
+      posts_,
+      (vContent, post) => {
+        if(!post) return post;
+
+        //this is a hack. the htmlParser produces a string, when needs to be `eval`ed with `h` in scope. So.
+        window.h = h;
+        let newContent = eval(vContent)
+        post.content = newContent;
+        return post;
+      }
+    )
+    .merge(closeBtnClicks_)
+    .map(postOrClick => {
+      if(postOrClick.type === 'click') return false;
+      return postOrClick;
+    })
+    .startWith(false)
+    .map(view);
+}
+
+export default render_;
+#+end_src
+
+This might not be too straightforward to understand (or perhaps it is), but I am certain there is cleaner way of doing this.
+
+This is the end of our tutorial. We now have a fully functional RSS reader with few features missing.
+
+
+*Missing Features*
+
+- Ability to remove a Feed
+- Showing error/progress notifications
+
+There might be more I've forgotten. Best way of learning is to do something. This is the reason I built this app. I don't know if anyone is going to read this tutorial, but I'm being optimistic and leaving these two features un-done in hope of seeing some pull requests.
+
+Hope you enjoyed the ride.

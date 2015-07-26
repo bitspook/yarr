@@ -13,6 +13,7 @@
     "babel-loader": "^5.3.1",
     "css-loader": "^0.15.4",
     "extract-text-webpack-plugin": "^0.8.2",
+    "json-loader": "^0.5.2",
     "node-libs-browser": "^0.5.2",
     "sass-loader": "^1.0.2",
     "style-loader": "^0.12.3",
