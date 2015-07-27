@@ -5,52 +5,6 @@
 
 [[http://i.imgur.com/VdFhZFG.png]]
 
-** How to Follow the tutorial
-I've written this tutorial using git tags for chapters. We start with basic introduction to Rx, virtual-dom and then move ahead with writing a simplistic app.
-
-If you just want to read the tutorial, you can do that on Github. Just go through the tags in this repo from 0 to 10.
-
-If you want to follow along (you should):
-
-- Clone this repo
-- Checkout to tag 0
-  #+begin_src bash
-  git checkout 0-setup
-  #+end_src
-- Copy it over to another folder where you'll write the code
-- Start with reading readme.org. It'll instruct you how to proceed
-
-If you want to read the complete tutorial in a single document, there's also `complete-tutorial.org` committed in the final commit in which you can read all the chapters in a single document.
-
-*How to run the app*
-
-- Clone this repo and ~cd~ to the cloned folder
-- Execute: ~npm install~
-- You might need to install ~webpack~ and ~webpack-dev-server~ globally
-  #+begin_src javascript
-  npm install webpack webpack-dev-server -g
-  #+end_src
-- To check the app in development mode, just run ~webpack-dev-server~ and it'll run a server on ~localhost:8080~
-
-*How to build*
-
-- After above steps, execute this command:
-
-  #+begin_src javascript
-  NODE_ENV=production webpack -p
-  #+end_src
-
-- Now you can simply open ~index.html~ in your browser.
-
-Here are few things this tutorial might have to offer:
-
-- An app writing without using any frameworks
-- The whole app is a long chain of operations on Observables. We'll try to get as close as possible to a system like this: [[http://i.imgur.com/1wMthve.png]]
-  We'll fetch data from network, put it in indexedDb (the source), make it go through a long chain of operations, and put it in on the webpage (the sink).
-- Persistent offline storage with IndexedDB
-- Meteor like reactive client side db (although Meteor's client db is not persistent)
-- Easter eggs, obvious/non-obvious mistakes made on purpose and otherwise
-
 ** Table of Contents
 
 - *[[https://github.com/channikhabra/yarr/tree/0-setup][Chapter 0 : Setup]]*
@@ -96,3 +50,49 @@ Here are few things this tutorial might have to offer:
 - *[[https://github.com/channikhabra/yarr/tree/10-reader-view][Chapter 10 : The Reader]]*
 
   The final piece of the puzzle. We'll create a component which'll parse HTML strings provided by our RSS feed to what virtual-dom understands (hyperscript), and show it in an elegant manner.
+
+** How to Follow the tutorial
+I've written this tutorial using git tags for chapters. We start with basic introduction to Rx, virtual-dom and then move ahead with writing a simplistic app.
+
+If you just want to read the tutorial, you can do that on Github. Just go through the tags in this repo from 0 to 10.
+
+If you want to follow along (you should):
+
+- Clone this repo
+- Checkout to tag 0
+  #+begin_src bash
+  git checkout 0-setup
+  #+end_src
+- Copy it over to another folder where you'll write the code
+- Start with reading readme.org. It'll instruct you how to proceed
+
+If you want to read the complete tutorial in a single document, there's also `complete-tutorial.org` committed in the final commit in which you can read all the chapters in a single document.
+
+*How to run the app*
+
+- Clone this repo and ~cd~ to the cloned folder
+- Execute: ~npm install~
+- You might need to install ~webpack~ and ~webpack-dev-server~ globally
+  #+begin_src javascript
+  npm install webpack webpack-dev-server -g
+  #+end_src
+- To check the app in development mode, just run ~webpack-dev-server~ and it'll run a server on ~localhost:8080~
+
+*How to build*
+
+- After above steps, execute this command:
+
+  #+begin_src javascript
+  NODE_ENV=production webpack -p
+  #+end_src
+
+- Now you can simply open ~index.html~ in your browser.
+
+Here are few things this tutorial might have to offer:
+
+- An app written without using any frameworks
+- The whole app is a long chain of operations on Observables. We'll try to get as close as possible to a system like this: [[http://i.imgur.com/1wMthve.png]]
+  We'll fetch data from network, put it in indexedDb (the source), make it go through a long chain of operations, and put it in on the webpage (the sink).
+- Persistent offline storage with IndexedDB
+- Meteor like reactive client side db (although Meteor's client db is not persistent)
+- Easter eggs, obvious/non-obvious mistakes made on purpose and otherwise
