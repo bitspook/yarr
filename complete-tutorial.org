@@ -3,20 +3,20 @@
 
 Yarr is a small RSS reader we'll build using RxJS and ES2015 in this workshop session, with some spices:
 
-- We'll not use any JS framework
-- We'll use Virtual-DOM library for optimal DOM updates
+- We'll not use any JS frameworks
+- We'll use the Virtual-DOM library for optimal DOM updates
 - We'll use delegated events
 - We'll use indexedDB for offline-storage of RSS feeds
 
 ** Objective
-*** Not using any framework
+*** Not using any frameworks
 - *Focus only on Rx*
 
-  The objective we want to achieve with this tutorial is to start thinking in terms of Observables (we'll come to them later). Using a framework would add another layer to worry about (slash learn). We wanna focus exclusively on FRP aspect of RxJS, and not let more than necessary abstractions from other systems hinder us.
+  The objective we want to achieve with this tutorial is to start thinking in terms of Observables (we'll come to them later). Using a framework would add another layer to worry about (slash learn). We wanna focus exclusively on FRP aspect of RxJS, and not have more than necessary abstractions from other systems hinder us.
 
 - *Come up with a sane architecture by ourself*
 
-  Not really the objective, more of a wish. Let's see if we can come up with a saner architecture without stressing it too much, without relying on a framework to force our hand to do it a certain way. You've been warned, I am a 100% self-taught, don't blame me if we end up with a pile of horseshit 😛
+  Not really the objective, more of a wish. Let's see if we can come up with a saner architecture without stressing it too much, without relying on a framework to force our hands to do it a certain way. You've been warned, I am a 100% self-taught, don't blame me if we end up with a pile of horseshit 😛
 
 - *Fun*
 
@@ -25,22 +25,22 @@ Yarr is a small RSS reader we'll build using RxJS and ES2015 in this workshop se
 *** Using Virtual DOM
 - *Focus only on FRP*
 
-  Virtual DOM is awesome. It can do changes in rendered DOM much more optimally with much little effort (from our end). We don't want to get into the intricacies of doing *proper* DOM manipulations during the tutorial. We only have 90 minutes and we wanna focus on thinking in Observables.
+  Virtual DOM is awesome. It can do changes in the rendered DOM far more optimally, with less effort (from our end). We don't want to get into the intricacies of doing *proper* DOM manipulations during the tutorial. We only have 90 minutes and we wanna focus on thinking in Observables.
 
   Moreover, Virtual-DOM actually help in creating a better architecture for our app. We'll see how.
 
 *** Using delegated events
 We'll see what they are and why we're using them later when we come to them.
 
-At the end of the day, it's all a fun little app, and I expect you to have fun building it with me.
+At the end of the day, it's going to be a fun little app, and I expect you'll have fun building it with me.
 
 ** Tutorial
 
 I created YARR for following personal reasons:
 
-- For learning RxJS properly. Teaching is best learning they say, please feel at home for humbling me by pointing my mistakes in this code base
-- Trying to roll something sane without using full-fledged frameworks. Mostly to test myself if I can come up with a decent architecture without having a framework forcing my hand to do so. When I found RxJS I saw a good resource to get over a big hurdle: propagation of change in the app.
-- To Prepare workshop for jQuery-conf 2015. Now the conference went horrible, people there were simply not ready for ES6 let aside RxJS. I was kinda expecting it, so instead of just letting that prep time go to waste, I thought to make use of it and write a tutorial which might someone else on the Internet.
+- For learning RxJS properly. Teaching is best way of learning they say, please feel at home don't hesitate to humble me by pointing out my mistakes in this code base
+- Trying to roll out something sane without using full-fledged frameworks. Mostly to test myself if I can come up with a decent architecture without having a framework forcing my hands to do so. When I found RxJS I saw a good resource to get over a big hurdle: propagation of change in the app.
+- To Prepare workshop for jQuery-conf 2015. Now the conference went horrible, people there were simply not ready for ES6 let aside RxJS. I was kinda expecting it, so instead of just letting that prep time go to waste, I thought I'd make better use of the time and write a tutorial which might help someone else on the Internet.
 
 *** How to Follow the tutorial
 I've written this tutorial using git tags for chapters. We start with basic introduction to Rx, virtual-dom and then move ahead with writing a simplistic app.
@@ -51,11 +51,11 @@ If you want to follow along (you should):
 
 - Clone this repo
 - Checkout to tag 0
-  #+begin_src bash
+#+begin_src bash 
   git checkout 0-setup
-  #+end_src
+#+end_src
 - Copy it over to another folder where you'll write the code
-- Start with reading readme.org. It'll instruct you how to proceed
+- Start with reading readme.org. It'll instruct you on how to proceed
 
 If you want to read the complete tutorial in a single document, there's also `complete-tutorial.org` committed in the final commit in which you can read all the chapters in a single document.
 
@@ -64,30 +64,30 @@ If you want to read the complete tutorial in a single document, there's also `co
 - Clone this repo and ~cd~ to the cloned folder
 - Execute: ~npm install~
 - You might need to install ~webpack~ and ~webpack-dev-server~ globally
-  #+begin_src javascript
+#+begin_src javascript
   npm install webpack webpack-dev-server -g
-  #+end_src
+#+end_src
 - To check the app in development mode, just run ~webpack-dev-server~ and it'll run a server on ~localhost:8080~
 
 *How to build*
 
 - After above steps, execute this command:
 
-  #+begin_src javascript
+#+begin_src javascript
   NODE_ENV=production webpack -p
-  #+end_src
+#+end_src
 
-- Now you can simply open ~index.html~ in your browser.
+- Now you can simply open a browser and navigate to ~localhost:8080~ there you will see ~index.html~.
 
 *** What to expect
 
-I am not expert at anything. I found RxJS couple months or so back, and I've been playing with it in my very little free time. I liked it a lot, and saw an opportunity to build something the way I wanted and I did. Keep your eyes open at all times while reading this tutorial. I don't mind if you point out some mistakes/wrong-decisions I've made, I appreciate it actually. I am a self-taught, that'll help me a lot. So please be my guest and humble me.
+I am not expert at anything. I found RxJS a couple of months back and I've been playing with it in the very little free time I have. I liked it a lot and saw an opportunity to build something the way I wanted so I did. Keep your eyes open at all times while reading this tutorial. I don't mind if you point out some mistakes/wrong-decisions I've made, I'd actually appreciate it as I am a self-taught so showing me where I have gone wrong would help me a lot. Please be my guest and humble me.
 
 Other than that, here are few things this tutorial might have to offer:
 
 - An app writing without using any frameworks
 - The whole app is a long chain of operations on Observables. We'll try to get as close as possible to a system like this: [[http://i.imgur.com/1wMthve.png]]
-  We'll fetch data from network, put it in indexedDb (the source), make it go through a long chain of operations, and put it in on the webpage (the sink).
+  We'll fetch data from a network, put it in indexedDb (the source), make it go through a long chain of operations, and put it onto the webpage (the sink).
 - Persistent offline storage with IndexedDB
 - Meteor like reactive client side db (although Meteor's client db is not persistent)
 - Easter eggs, obvious/non-obvious mistakes made on purpose and otherwise
@@ -100,15 +100,15 @@ Other than that, here are few things this tutorial might have to offer:
 
 - *[[https://github.com/channikhabra/yarr/tree/1-hello-rx][Chapter 1 : Intro to Observables]]*
 
-  If you're new to Rx, this chapter will act as a small introduction. It's not extensive, more of just a brush up. If you haven't heard of Rx yet, you might like going through this [[http://channikhabra.github.io/frp-with-rxjs-jschannel-conf/#/][presentation]] (with [[https://github.com/channikhabra/frp-with-rxjs-jschannel-conf/blob/master/README.org][transcript]]).
+  If you're new to Rx, this chapter will act as a small introduction. It's not extensive, more of a brush up on the subject. If you haven't heard of Rx yet, it will be usefull for you to go through this [[http://channikhabra.github.io/frp-with-rxjs-jschannel-conf/#/][presentation]] (with [[https://github.com/channikhabra/frp-with-rxjs-jschannel-conf/blob/master/README.org][transcript]]).
 
 - *[[https://github.com/channikhabra/yarr/tree/2-hello-vdom][Chapter 2 : Intro to Virtual-Dom]]*
 
-  This chapter will introduce virtual-dom and we'll see how virtual-dom is used (not how it works). Again sort of brush up to bring us to same page.
+  This chapter will introduce virtual-dom and we'll see how virtual-dom is used (not how it works). Again a sort of brush up to bring us onto the same page.
 
 - *[[https://github.com/channikhabra/yarr/tree/3-renderer][Chapter 3 : Components and Rendering System]]*
 
-  I like React and the it allows writing code in terms of isolated components. That's the API we kinda-sorta try to achieve in this tutorial, and I think we get success to a fair length. We'll set a very slim rendering system, and some conventions about how we'll write our views as components and how we'll try to keep them isolated.
+  I like React and that it give the ability to write code into isolated components. That's the API we're kinda-sorta going to try and achieve in this tutorial. I think we go a long way and succeed in achieving that API. We'll set a very slim rendering system, and some conventions about how we'll write our views as components and how we'll try to keep them isolated.
 
 - *[[https://github.com/channikhabra/yarr/tree/4-delegated-events][Chapter 4 : Delegated Events]]*
 
@@ -116,7 +116,7 @@ Other than that, here are few things this tutorial might have to offer:
 
 - *[[https://github.com/channikhabra/yarr/tree/5-fetch-feeds-and-styles][Chapter 5 : Fetching Feeds and Styles]]*
 
-  This will be an easy one, title is self explanatory I think.
+  This will be an easy one, the title is self explanatory I think.
 
 - *[[https://github.com/channikhabra/yarr/tree/6-sidebar-controls-and-models][Chapter 6 : Models and Sidebar Controls]]*
 
@@ -124,11 +124,11 @@ Other than that, here are few things this tutorial might have to offer:
 
 - *[[https://github.com/channikhabra/yarr/tree/7-offline-storage-with-dexiejs][Chapter 7 : Offline Storage with Dexie.js]]*
 
-  We'll use dexie.js for using IndexedDB for making our app offline compatible. Dexie is a slim abstraction over IndexdDB. We'll take an offline first approach to build our app.
+  We'll use dexie.js for using IndexedDB to make our app offline compatible. Dexie is a slim abstraction over IndexdDB. We'll take an offline first approach to building our app.
 
 - *[[https://github.com/channikhabra/yarr/tree/8-reactive-dexie][Chapter 8 : Making Dexie.js reactive]]*
 
-  I do a lot of work with Meteor.js, and I love the way it provides a kind of database on the client which is *reactive*. Reactive like you just change the data in the database, and UI (or whatever else) who's using that data will respond to the change. That's what we'll try to achieve in this chapter. e.g we'll just put feeds in our IndexedDB and they'll show up in UI automagically.
+  I do a lot of work with Meteor.js, and I love the way it provides a kind of database on the client which is *reactive*. Reactive as in you just changed the data in the database, and UI (or whatever else) who's using that data will respond to the change. That's what we'll try to achieve in this chapter. e.g we'll just put feeds in our IndexedDB and they'll show up in UI automagically.
 
 - *[[https://github.com/channikhabra/yarr/tree/9-bring-ui-to-life][Chapter 9 : Bring UI to Life]]*
 
@@ -139,7 +139,7 @@ Other than that, here are few things this tutorial might have to offer:
   The final piece of the puzzle. We'll create a component which'll parse HTML strings provided by our RSS feed to what virtual-dom understands (hyperscript), and show it in an elegant manner.
 
 ** Chapter 0 : Setup
-First this we need to do is clone this tutorial. This tutorial is written in steps. Each step is represented as a git tag. We can checkout to the tag we want, try to do the tasks for the step, commit them, and checkout to next step if you'd want to start with a fresh slate.
+First thing we need to do is clone this tutorial. This tutorial is written in steps. Each step is represented as a git tag. It can be checkouted to the tag we want, try to do the tasks for the step, commit them, and checkout to next step if you'd want to start with a fresh slate.
 
 *** Clone this repo
 #+begin_src bash
@@ -152,7 +152,7 @@ Now that we have the repo cloned, let's checkout to step 0 so we can start with 
 git checkout 0-setup
 #+end_src
 
-This will take us to clean slate, the start of the tutorial. We'll start with our tutorial from here on. The project would look like this at this point:
+This will take us to a clean slate, the start of the tutorial. From here on we will begin our tutorial. The project directories should look like this after the checkout:
 #+begin_src bash
 .
 ├── package.json
@@ -173,20 +173,20 @@ Take a sneek-peek at package.json.
 - `dependencies` contain the modules we'll use in the tutorial.
   - babel-runtime
 
-    It's required for using a number of ES6 features, and helps in general if our app is split across multiple files.
+    It's required for using a number of ES6 features, and generaly helps if our app is split across multiple files.
 
   - html2hscript
 
-    We're building a RSS reader, right? So at the end of the day, we'll get HTML strings (the blog posts' content) that we'll want to show in our HTML, but we are using virtual-dom, so instead of just dropping in our document directly, we parse the HTML strings to virtual-dom hyperscript, and tell virtual-dom to do the rendering.
-    This is what this module do. It parse html to virtual-dom hyperscript.
+    We're building a RSS reader, right? So to acomplish that, we'll get HTML strings (blog posts' content) that we want to show in our HTML, but we are using virtual-dom, so instead of just dropping in our document directly, we need to parse the HTML strings to virtual-dom hyperscript, and tell virtual-dom to do the rendering.
+    This is what this module does. It parse html to virtual-dom hyperscript.
 
   - dexie
 
-    Dexie is a wrapper for indexedDB which we'll use for offline storage of RSS feeds.
+    Dexie is a wrapper for indexedDB which we'll use for offline storage of the RSS feeds.
 
   - jquery
 
-    We don't really use most of jquery. We don't really need any of jquery. But we'll use it in few places just to see how RxJS can interoperate with other libs like the mighty jquery.
+    We don't really use most of the JQuery library. We could do it without. But we'll use it in few places just to see how RxJS can interoperate with other libs like the mighty JQuery.
 
   - rx
 
@@ -201,33 +201,34 @@ Let's quickly write some boilerplate to check if our setup is working as it shou
 
 - *Create /dist and /src*
   If you look in the webpack.config.js, you'll see following config:
-  #+begin_src javascript
+  
+#+begin_src javascript
   entry: {
     app: ['./src/index.js']
   },
   output: {
     filename: 'dist/[name].js'
   },
-  #+end_src
+#+end_src
 
-  This means that webpack will enter our app from `./src/index.js` file, and will output the js after all pre-processing it need to do to `./dist/app.js` file. Let's quickly create `dist` and `src` directories.
+  This means that webpack will enter our app from `./src/index.js` file, and will output the js after all pre-processing it needs to do to the `./dist/app.js` file. Let's quickly create `dist` and `src` directories.
 
-  #+begin_src bash
+#+begin_src bash
   mkdir src dist
   echo "console.log('hello world');" >> src/index.js
-  #+end_src
+#+end_src
 
-- *Check webpack is working*
+- *Check that webpack is working*
 
   Running following command should create `dist/app.js` file. If it does, our setup is working and we're good to go.
-  #+begin_src bash
+#+begin_src bash
   webpack -p
-  #+end_src
+#+end_src
 
 - *Create index.html*
 
-  This is the only html file we'll write in this whole tutorial. Only an entry point for including our `dist/app.js` which'll take the wheel.
-  #+begin_src xml
+  This is the only html file we'll write in this whole tutorial. It's only used as an entry point for including our `dist/app.js` which will take the wheel of our app.
+#+begin_src xml
   <!doctype html>
   <html lang="en">
     <head>
@@ -239,30 +240,28 @@ Let's quickly write some boilerplate to check if our setup is working as it shou
       <script src="dist/app.js"></script>
     </body>
   </html>
-
-  #+end_src
+#+end_src
 
 - *Check webpack-dev-server*
 
-  We'll use webpack-dev-server for live-reloading. It can do more fancy tasks, but we'll not use 'em.
-  Runnng following command should start the webpack server and we'll be able to see `hello world` logged to javascript console at http://localhost:8080
+  We'll use webpack-dev-server for live-reloading. It can do other fancy tasks, but we'll not be using 'em.
+  Running the following command should start the webpack server and we'll be able to see `hello world` logged to the javascript console at http://localhost:8080
 
-  #+begin_src bash
+#+begin_src bash
   webpack-dev-server
-  #+end_src
-
-
-If all is working well. We can move on to next step.
+#+end_src
+it all worked well, we can move onto the next step.
 
 - *Checkout to next step*
-  #+begin_src javascript
+#+begin_src javascript
   git checkout 1-hello-rx
-  #+end_src
+#+end_src
+
 ** Chapter 1 : Intro to Observable
 Rx or Reactive Extensions is a javascript library for writing asynchronous/event-based code in terms of composable asynchronous-streams. An asynchronous stream/collection is represented by an *Observable*.
 
 *** Observable
-Observables are central to Rx. We can think of an Observable as an array spanned over time. It's a collection which gets its values over time. Or, we can think of them as a promise which can resolve more than once.
+Observables are central to Rx. We can think of an Observable as an array spanned over time. It's a collection which gets its values over time. Or we can think of them as a promise which can resolve more than once.
 
 An Observable is to Promise what an Array is to a single value.
 
@@ -274,75 +273,75 @@ An Observable is to Promise what an Array is to a single value.
                           |   Iterable   | Observable |
 #+end_src
 
-Let's not talk much and play with Observables to get a feel. Open `index.js` file in your favourite editor and
+Let's not talk too much so instead let's play with Observables to get a feel. Open `index.js` file in your favourite editor and:
 
 - *Start webpack-dev-server*
 
-  Let's start webpack-dev-server first so it will watch for changes in our project and reload the browser on changes.
+  Let's start the webpack-dev-server first so it will watch for changes in our project and reload the browser on saved changes.
 
-  #+begin_src bash
+#+begin_src bash
   webpack-dev-server
-  #+end_src
+#+end_src
 
 - *Import Observable*
 
   We're using ES2015, so we'll use the new module system to import `Observable` object from `rx` library we've installed as a node module. Let's remove everything from `index.js` and import Observable first.
 
-  #+begin_src javascript
+#+begin_src javascript
   import {Observable} from 'rx';
-  #+end_src
+#+end_src
 
-  Above code is roughly equivalent to `var Observable = require('rx').Observable;` in regular node.js code.
+  The above code is roughly equivalent to `var Observable = require('rx').Observable;` in regular node.js code.
   We are now ready to play with Observable.
 
 - *Arrays to Observables*
 
-  We can convert JS arrays to Observables using `Observable.from` method.
+  We can convert JS arrays to Observables using the `Observable.from` method.
 
-  #+begin_src javascript
+#+begin_src javascript
   let nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
   let nums_ = Observable.from(nums);
-  #+end_src
+#+end_src
 
-  `nums_` is my personal preference of naming Ovservables (and functions which return Observables), you don't need to follow if you don't like it. I think it help to use an underscore at the end to tell that this is a stream.
+  `nums_` is my personal preference for naming Ovservables (and functions which return Observables), you don't need to follow this convention if you don't like it. I think it helps to use an underscore at the end so you can tell that it is a stream.
 
-  Observables provide an interface similar to Array extras, i.e we can use map/filter/reduce on Observables to chain operations. This flow based programming is one of the killer features of RxJS.
+  Observables provide an interface similar to Array methods, i.e we can use map/filter/reduce on Observables to chain operations. This flow based programming is one of the killer features of RxJS.
 
   Let's filter out odd numbers from `nums_` and find evens_.
 
-  #+begin_src javascript
+#+begin_src javascript
   let evens_ = nums_
                 .filter(n => n % 2 === 0);
 
   console.log(evens_);
-  #+end_src
+#+end_src
 
-  It'll log something like this to console:
+  It'll log something like this to the console:
 
-  #+begin_src javascript
+#+begin_src javascript
   Filt.......v.ble {source: FromObservable}
-  #+end_src
+#+end_src
 
-  Now that's not what we were expecting, is it? Do we expect to see a value when we log a promise? No, right?
+  Now that's not what we were expecting, was it? Did we expect to see a value when we log a promise? No, right?
 
-  To get a values out of an Observable, we have to subscribe to the Observable. Observable don't execute any code in the chain until and unless there is at least one active subscription to the Observable.
+  To get a values out of an Observable, we have to subscribe to the Observable. Observable use lazy evaluation and won't execute any code in the chain until / unless there is at least one active subscription to the Observable.
 
   Let's subscribe to our Observable to get our even numbers.
 
-  #+begin_src javascript
+#+begin_src javascript
   evens_.subscribe(x => console.log('Even: ', x))
-  #+end_src
+#+end_src
 
-  This callback is executed Observable gets a value. `Observable.subscribe` can take upto 3 methods:
-  - onNext        - executed on every value Observable gets
+  This callback is executed the Observable gives back a value. The Subscription `Observable.subscribe` can take upto 3 methods:
+  - onNext        - executed on every value Observable gives back
   - onError       - executed if any error happens anywhere in the chain of operators
   - onCompleted   - executed when Observable is completed
 
 - *Ajax requests with Observable*
 
-  Observable play well with promises, and allow composition with other Observable and promises. For an example, let's make multiple ajax requests, and log their status to console.
-  #+begin_src javascript
+  Observables play well with promises, and allow composition with other Observables and promises. For an example, let's make multiple ajax requests, and log their status to console.
+#+begin_src javascript
   import {get} from 'jQuery';
 
   let urls = [
@@ -357,15 +356,15 @@ Let's not talk much and play with Observables to get a feel. Open `index.js` fil
       err => console.error('Error while fetching:', err),
       () => console.log('Done with all requests')
     );
-  #+end_src
+#+end_src
 
-  Let's discuss some of Rx operators we'll be using often in our tutorial.
+  Let's discuss some of Rx operators we'll be using often throughout our tutorial.
 
 - *Observable.prototype.flatMap*
 
   flatMap is like combination of two operators: `map` and `flatten`. It maps a function over the source Observable, and flatten the result, i.e it assume an Observable to be returned from the function, and it returns the value of that observable. It can also resolve Promise and generators to values, like in the above example.
 
-  #+begin_src javascript
+#+begin_src javascript
   ----val----val----val----val---------|
 
   -----------------map-----------------
@@ -375,44 +374,44 @@ Let's not talk much and play with Observables to get a feel. Open `index.js` fil
   ----------------flat-----------------
 
   --newVal--newVal--newVal--newVal-----|
-  #+end_src
+#+end_src
 
 - *Observable.prototype.merge*
 
-  It merges two Observable, and produce a new one which emits the value when either one of the participant Observable emits a value.
+  It merges two Observables, and produce a new one which emits the value when either one of the participant Observables emits a value.
 
-  #+begin_src javascript
+#+begin_src javascript
   Observable
   .interval(1000)
   .merge(
     Observable.interval(2000)
   )
   .subscribe(x => console.log('Merged: ', x));
-  #+end_src
+#+end_src
 
   `Observable.interval` produces an Observable which emits an integer every N milliseconds. Above code produce output like this:
 
-  #+begin_src javascript
+#+begin_src javascript
   Merged:  0
   Merged:  0
   Merged:  1
   Merged:  2
   Merged:  1
   Merged:  3
-  #+end_src
+#+end_src
 
   The merge operation looks somewhat like this:
 
-  #+begin_src javascript
+#+begin_src javascript
   ------A-------A------A--------|
   ---B------B------B------B-----|
           -----merge-----
   ---B--A---B---A------A--B-----|
-  #+end_src
+#+end_src
 
 - *Observable.prototype.zip*
 
-  #+begin_src javascript
+#+begin_src javascript
   let evens_ = Observable.from([0, 2, 4, 6, 8, 10]);
   let odds_ = Observable.from([1, 3, 5, 7, 9]);
 
@@ -422,15 +421,15 @@ Let's not talk much and play with Observables to get a feel. Open `index.js` fil
       (even, odd) => even + odd
     )
     .subscribe(x => console.log('Even+Odd: ', x));
-  #+end_src
+#+end_src
 
-  zip takes one or more Observables, and a callback function which it executes with values from each of the participant Observable as argument. It then creates a new Observable which emits the resulting values. Note that zip wait for each of its Observable to emit a value, and then match it. Oddly matched Observable can keep hanging forever. PS all operators are asynchronous, so there's no blocking.
+  zip takes one or more Observables, and a callback function which it executes with values from each of the participant Observable as an argument. It then creates a new Observable which emits the resulting values. Note that zip wait for each of its Observable to emit a value, and then match it. Oddly matched Observable can keep hanging forever. PS all operators are asynchronous, so there's no blocking.
 
 - *Observable.combineLatest*
 
-  combineLatest takes N Observables as argument, and a callback function which accepts N arguments, and create a new Observable. It executes the callback with latest value from each of the argument Observable, and emit the resulting value. It waits until the each of the argument Observable has emitted at least one value.
+  combineLatest takes N Observables as an argument, and a callback function which accepts N arguments, and create a new Observable. It executes the callback with the latest value from each of the argument Observable, and emits the resulting value. It waits until each of the argument Observables has emitted at least one value.
 
-  #+begin_src javascript
+#+begin_src javascript
   Observable
   .combineLatest(
     resize_,
@@ -442,16 +441,16 @@ Let's not talk much and play with Observables to get a feel. Open `index.js` fil
   .subscribe(
     x => console.log('Window resized or clicked', x)
   );
-  #+end_src
+#+end_src
 
-  Yup we can convert events to Observable! We can do that with a lot many things: promises, events, callbacks, generators, you name it.
-  Good thing about converting events to Observable is that it make you think of events in terms of data sources. Think of the clicks as a data source, which emits data whenever user clicks. It makes composing them so much simpler.
+  Yup we can convert events to Observable! We can do that with many things: promises, events, callbacks, generators, you name it.
+  Good thing about converting events to Observable is that it makes you think of events as data sources. Think of the click evetns as a data source, which emits data whenever user clicks. It makes composing them so much simpler.
 
   In the above example, we combineLatest resize and click events on window. If we reload and click on the page, we won't see anything in console. That's because Observable.combineLatest is waiting for the second Observable to start. Now if we resize the window just once, the click events will start getting logged on the console.
 
 - *Observable.prototype.startWith*
 
-  #+begin_src javascript
+#+begin_src javascript
   Observable
   .combineLatest(
     resize_.startWith(null),
@@ -463,9 +462,9 @@ Let's not talk much and play with Observables to get a feel. Open `index.js` fil
   .subscribe(
     x => console.log('Window resized or clicked', x)
   );
-  #+end_src
+#+end_src
 
-  So combineLatest waits for all the Observables to participate at least once. That's not what we always want. Sometime we want can start with a default value, and we want our resulting Observable to be working right away. For that we have startWith; it make the Observable start with the value we provide it.
+  So combineLatest waits for all the Observables to participate at least once. That's not what we always want. Sometime we want to be able to start with default values and we want our resulting Observable to be working right away. For that we have `startWith()` it makes the Observable start with the value we provide it.
 
 That's it for Observable examples. Let's move on with the tutorial, we'll discuss more operators as we use them.
 
