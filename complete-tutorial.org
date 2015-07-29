@@ -342,7 +342,7 @@ Let's not talk too much so instead let's play with Observables to get a feel. Op
 
   Observables play well with promises, and allow composition with other Observables and promises. For an example, let's make multiple ajax requests, and log their status to console.
 #+begin_src javascript
-  import {get} from 'jQuery';
+  import {ajax} from 'jQuery';
 
   let urls = [
     'http://en.wikipedia.org/w/api.php?action=opensearch&format=json&search=test'
