@@ -63,21 +63,19 @@ If you want to read the complete tutorial in a single document, there's also `co
 
 - Clone this repo and ~cd~ to the cloned folder
 - Execute: ~npm install~
-- You might need to install ~webpack~ and ~webpack-dev-server~ globally
-#+begin_src javascript
-  npm install webpack webpack-dev-server -g
-#+end_src
-- To check the app in development mode, just run ~webpack-dev-server~ and it'll run a server on ~localhost:8080~
+- To check the app in development mode, just run ~npm start~ and it'll run a server on ~localhost:8080~
 
 *How to build*
 
 - After above steps, execute this command:
 
 #+begin_src javascript
-  NODE_ENV=production webpack -p
+  npm run build
 #+end_src
 
 - Now we've created our styles and scripts in dist.js, and you can simply open index.html in your browser.
+
+*Credits*: Thanks to @Cmdv for the effort of writing these npm scripts. I was using webpack directly from cli earlier (I prefer that in a tutorial), but it require installing webpack/webpack-dev-server globally, which can be avoided with npm scripts, and they are more comfy.
 
 *** What to expect
 
