@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "description": "Yet another RSS Reader",
   "author": "ckhabra@gmail.com (https://channikhabra.github.io/)",
+  "scripts": {
+    "start": "node server.js",
+    "build": "./node_modules/.bin/webpack --progress --colors --config webpack.config.production.js"
+  },
   "license": "MIT",
   "devDependencies": {
     "babel-core": "^5.6.17",
@@ -14,8 +18,8 @@
     "sass-loader": "^1.0.2",
     "style-loader": "^0.12.3",
     "virtual-dom-loader": "^0.1.0",
-    "webpack": "^1.10.1",
-    "webpack-dev-server": "^1.10.1"
+    "webpack": "^1.8.4",
+    "webpack-dev-server": "^1.8.0"
   },
   "dependencies": {
     "babel-runtime": "^5.6.17",
