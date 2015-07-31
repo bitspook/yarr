@@ -40,28 +40,28 @@ Let's quickly write some boilerplate to check if our setup is working as it shou
 - *Create /dist and /src*
 
   If you look in the webpack.config.js, you'll see following config:
-  #+begin_src javascript
+ #+begin_src javascript
   entry: {
     app: ['./src/index.js']
   },
   output: {
     filename: 'dist/[name].js'
   },
-  #+end_src
+ #+end_src
 
   This means that webpack will enter our app from `./src/index.js` file, and will output the js after all pre-processing it need to do to `./dist/app.js` file. Let's quickly create `dist` and `src` directories.
 
-  #+begin_src bash
+ #+begin_src bash
   mkdir src dist
   echo "console.log('hello world');" >> src/index.js
-  #+end_src
+ #+end_src
 
 - *Check webpack is working*
 
   Running following command should create `dist/app.js` file. If it does, our setup is working and we're good to go.
-  #+begin_src bash
+ #+begin_src bash
   webpack -p
-  #+end_src
+ #+end_src
 
 - *Create index.html*
 
@@ -86,14 +86,14 @@ Let's quickly write some boilerplate to check if our setup is working as it shou
   We'll use webpack-dev-server for live-reloading. It can do more fancy tasks, but we'll not use 'em.
   Runnng following command should start the webpack server and we'll be able to see `hello world` logged to javascript console at http://localhost:8080
 
-  #+begin_src bash
+ #+begin_src bash
   webpack-dev-server
-  #+end_src
+ #+end_src
 
 
 If all is working well. We can move on to next step.
 
 - *Checkout to next step*
-  #+begin_src javascript
+ #+begin_src javascript
   git checkout 1-hello-rx
-  #+end_src
+ #+end_src
