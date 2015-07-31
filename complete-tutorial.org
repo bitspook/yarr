@@ -67,14 +67,14 @@ If you want to read the complete tutorial in a single document, there's also `co
 #+begin_src javascript
   npm install webpack webpack-dev-server -g
 #+end_src
-- To check the app in development mode, just run ~webpack-dev-server~ and it'll run a server on ~localhost:8080~
+- To check the app in development mode, just run ~npm start~ and it'll run a server on ~localhost:8080~
 
 *How to build*
 
 - After above steps, execute this command:
 
 #+begin_src javascript
-  NODE_ENV=production webpack -p
+  npm run build
 #+end_src
 
 - Now we've created our styles and scripts in dist.js, and you can simply open index.html in your browser.
@@ -157,6 +157,8 @@ This will take us to a clean slate, the start of the tutorial. From here on we w
 .
 ├── package.json
 ├── readme.org
+├── server.js
+├── webpack.config.production.js
 └── webpack.config.js
 #+end_src
 
@@ -196,39 +198,41 @@ Take a sneek-peek at package.json.
 
     Deputy chief guest? Chief guest's assistant perhaps.
 
-*** Mic testing
+** Mic testing
 Let's quickly write some boilerplate to check if our setup is working as it should.
 
 - *Create /dist and /src*
-  If you look in the webpack.config.js, you'll see following config:
 
-#+begin_src javascript
-  entry: {
-    app: ['./src/index.js']
-  },
+  If you look in the webpack.config.production.js, you'll see following config:
+ #+begin_src javascript
+  entry: './src/index',
   output: {
-    filename: 'dist/[name].js'
+    path: path.join(__dirname, 'dist'),
+    filename: 'app.js',
+    publicPath: '/'
   },
-#+end_src
+ #+end_src
 
-  This means that webpack will enter our app from `./src/index.js` file, and will output the js after all pre-processing it needs to do to the `./dist/app.js` file. Let's quickly create `dist` and `src` directories.
+  This means that webpack will enter our app from `./src/index.js` file, and will output the js after all pre-processing it need to do to `./dist/app.js` file. Let's quickly create `dist` and `src` directories.
 
-#+begin_src bash
+ #+begin_src bash
   mkdir src dist
   echo "console.log('hello world');" >> src/index.js
-#+end_src
+ #+end_src
 
-- *Check that webpack is working*
+- *Check webpack is working*
 
-  Running following command should create `dist/app.js` file. If it does, our setup is working and we're good to go.
-#+begin_src bash
-  webpack -p
-#+end_src
+  Running following command should create `dist/app.js` file. If it does, our setup is working and we’re good to go.
+ #+begin_src bash
+  npm run build
+ #+end_src
+  
+  We're using npm to run our scripts
 
 - *Create index.html*
 
-  This is the only html file we'll write in this whole tutorial. It's only used as an entry point for including our `dist/app.js` which will take the wheel of our app.
-#+begin_src xml
+  This is the only html file we’ll write in this whole tutorial. It’s only used as an entry point for including our `dist/app.js` which will take the wheel of our app.
+  #+begin_src xml
   <!doctype html>
   <html lang="en">
     <head>
@@ -240,17 +244,21 @@ Let's quickly write some boilerplate to check if our setup is working as it shou
       <script src="dist/app.js"></script>
     </body>
   </html>
-#+end_src
+
+  #+end_src
 
 - *Check webpack-dev-server*
 
-  We'll use webpack-dev-server for live-reloading. It can do other fancy tasks, but we'll not be using 'em.
-  Running the following command should start the webpack server and we'll be able to see `hello world` logged to the javascript console at http://localhost:8080
+  We'll use webpack-dev-server for live-reloading. It can do more fancy tasks, but we'll not use 'em.
+  Runnng following command should start the webpack server and we'll be able to see `hello world` logged to javascript console at http://localhost:8080
 
-#+begin_src bash
-  webpack-dev-server
-#+end_src
-it all worked well, we can move onto the next step.
+ #+begin_src bash
+  npm start
+ #+end_src
+ 
+ Agin we are using Webpack to run our server and if you want to see the setup files look in `server.js`.
+
+If all is working well. We can move on to next step.
 
 - *Checkout to next step*
 #+begin_src javascript
@@ -280,7 +288,7 @@ Let's not talk too much so instead let's play with Observables to get a feel. Op
   Let's start the webpack-dev-server first so it will watch for changes in our project and reload the browser on saved changes.
 
 #+begin_src bash
-  webpack-dev-server
+  npm start
 #+end_src
 
 - *Import Observable*
@@ -504,12 +512,12 @@ Let's first remove everything from index.js from previous step, and start with a
 
   It can be quite sweet writing HTML this way, but let's not do it today. We've included virtual-dom loader in our webpack config, which allow us to write HTMLish code in our JS, and give us what `h` would.
   So we can write hello-vdom like this:
-  #+begin_src javascript
+#+begin_src javascript
   let hw = <h1 className='hello-world'>Hello World</h1>
   let hwNode = createElement(hw);
 
   document.body.appendChild(hwNode);
-  #+end_src
+#+end_src
 
   But it require `h` to be present in scope to use this.
 
@@ -1049,7 +1057,9 @@ Our project shall look like this atm:
 │   │   └── main.js
 │   ├── index.js
 │   └── renderer.js
-└── webpack.config.js
+├── server.js
+├── webpack.config.js
+└── webpack.config.production.js
 #+end_src
 
 Also wipe-up the `components/main.js`.
