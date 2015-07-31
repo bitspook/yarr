@@ -1,7 +1,6 @@
 * Yarr : Hello vDOM
-Let's play with vitual DOM for a minute before we start with building our RSS reader. Rendering HTML to page is almost an important part you know!
-
-Let's first remove everything from index.js from previous step, and start with a clean stage.
+Let's play with vitual DOM for a minute before we start with building our RSS reader. Rendering HTML to page is a part that is just ass important you know!
+First let's remove everything from index.js from our previous step, and start with a clean slate.
 
 - *Import Virtual-DOM*
 
@@ -12,8 +11,8 @@ Let's first remove everything from index.js from previous step, and start with a
 
 - *Hello world*
 
-  `h` is a function provided by virtual-dom for creating hyperscript. The hyperscript created using `h` is then passed to `createElement` to create a virtual-node or vNode, which then is put into the HTML page.
-  Let's quickly create a hello vDOM.
+  `h` is a function provided by virtual-dom for creating hyperscript. The hyperscript created using `h` is then passed to `createElement` to create a virtual-node or vNode, which is then put into the HTML page.
+  Let's quickly create a 'hello' vDOM.
 
 #+begin_src javascript
   let hw = h('h1', {className: 'hello'}, ["Hello World"]);
@@ -30,7 +29,7 @@ Let's first remove everything from index.js from previous step, and start with a
 - *Virtual-dom Loader for HTMLish syntax*
 
   It can be quite sweet writing HTML this way, but let's not do it today. We've included virtual-dom loader in our webpack config, which allow us to write HTMLish code in our JS, and give us what `h` would.
-  So we can write hello-vdom like this:
+  So we can now write hello-vdom like this:
 #+begin_src javascript
   let hw = <h1 className='hello-world'>Hello World</h1>
   let hwNode = createElement(hw);
@@ -38,27 +37,27 @@ Let's first remove everything from index.js from previous step, and start with a
   document.body.appendChild(hwNode);
 #+end_src
 
-  But it require `h` to be present in scope to use this.
+  But it requires `h` to be present in scope to use this.
 
 - *Updating DOM*
 
-  But this is for rendering once, right? The reason we're using virtual-dom is to make optimal DOM updates. To do the updates on the DOM, we need to import `diff` and `patch` from virtual-dom.
+  The current setup is for rendering once, right? The reason we're using virtual-dom is to make optimal DOM updates. To do the updates on the DOM, we need to import `diff` and `patch` from virtual-dom.
 
 #+begin_src javascript
   import diff from 'virtual-dom/diff';
   import patch from 'virtual-dom/patch';
 #+end_src
 
-  Virtual-dom always keep one copy of the DOM it has rendered in memory. When we want to make some update in the DOM, we just recreate the whole view, and tell virtual-dom to render the new one. At this point, it diff the new DOM with the old copy it has, and patch the previous view with the diff.
+  Virtual-dom always keep one copy of the DOM it has rendered in memory. When we want to make some update on the DOM, we just recreate the whole view, and tell virtual-dom to render a new one. At this point, it diffs the new DOM with the old copy it has, and patches the previous view with the diff.
   An example of a counter built using `setInterval` and virtual DOM would look like this:
 
 #+begin_src javascript
   let render = (count) => <h1 className='hello-world'>Hello World {count + ''}</h1>;
-  //we did a `count = ''` above because `h` can't handle integers in this case, it need strings
+  //we've made the `count = ''` above because `h` can't handle integers in this case, it needs to be strings
 
   let count = 0;
 
-  //render gives us our whole view, only one h1 in our case
+  //render gives us our whole view, only one h1 for our case
   let view = render(count);
   //in virtual DOM, there has to be a single ultimate parent to hold all vNodes. Let's call it rootNode
   let rootNode = createElement(view)
@@ -68,11 +67,11 @@ Let's first remove everything from index.js from previous step, and start with a
   setInterval(function() {
     count ++;
 
-    //we create new view with new state
+    //we create new view with a new state
     let newView = render(count);
     //now let's diff the old with the new view and create patches
     let patches = diff(view, newView);
-    //let's create new rootNode by patching the old rootNode with the patches we got from diffing
+    //let's create new rootNode by patching the old rootNode with the patches we've got from diffing
     rootNode = patch(rootNode, patches);
     //and change our saved view for diffing next time we need to update DOM
     view = newView;
@@ -86,7 +85,7 @@ Let's first remove everything from index.js from previous step, and start with a
 
 - *vDOM with RxJS*
 
-  But hey! We are using Rx to use the shining asynchronous data streams, right? setTimeout looks like a good place to try our hands on. It is asynchronous, and emits events more than once; in other words, perfect to replace with Observable. Let's do that.
+  But hey! We are using Rx to be able to use the shinny asynchronous data streams, right? setTimeout looks like a good place to try ourget our hands into. It is asynchronous, and emits events more than once; in other words, perfect canditate to be replaced with an Rx Observable. Let's do that.
 
 #+begin_src javascript
   import {Observable} from 'rx';
@@ -98,7 +97,7 @@ Let's first remove everything from index.js from previous step, and start with a
   document.body.appendChild(rootNode);
 
   Observable
-    .interval(1000) //replace the steTimeout and `count` state variable. Interval will give us an increment-ing number every 1000 milliseconds
+    .interval(1000) //replace the steTimeout and `count` state variable. Interval will give us an incrementing number every 1000 milliseconds
     .map(n => render(n + 1)) //n+1 because we already started with 0
     .subscribe(
       newView => {
@@ -109,9 +108,9 @@ Let's first remove everything from index.js from previous step, and start with a
     );
 #+end_src
 
-  Sweet! Isn't it? Go eat some candy if you said no.
+  Sweet! Isn't it? Go eat some candy if you anitially thought no.
 
-Now that we know how to work with Rx and virtual-dom, let's start building our app: Yet Another RSS Reader (Yarr).
+Now that we know how to combine the power Rx and virtual-dom, let's start building our app: Yet Another RSS Reader (Yarr).
 
 #+begin_src
 git checkout 3-renderer
