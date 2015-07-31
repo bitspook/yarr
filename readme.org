@@ -1,5 +1,22 @@
 * Yarr
-** Install npm modules
+*** Checkout to step 0
+Now that we have the repo cloned, let's checkout to step 0 so we can start with the tutorial.
+#+begin_src bash
+git checkout 0-setup
+#+end_src
+
+This will take us to a clean slate, the start of the tutorial. From here on we will begin our tutorial. The project directories should look like this after the checkout:
+#+begin_src bash
+.
+├── package.json
+├── readme.org
+├── server.js
+├── webpack.config.production.js
+└── webpack.config.js
+#+end_src
+
+
+*** Install npm modules
 #+begin_src bash
 cd to/where/you/cloned/this/repo
 npm i
@@ -11,20 +28,20 @@ Take a sneek-peek at package.json.
 - `dependencies` contain the modules we'll use in the tutorial.
   - babel-runtime
 
-    It's required for using a number of ES6 features, and helps in general if our app is split across multiple files.
+    It's required for using a number of ES6 features, and generaly helps if our app is split across multiple files.
 
   - html2hscript
 
-    We're building a RSS reader, right? So at the end of the day, we'll get HTML strings (the blog posts' content) that we'll want to show in our HTML, but we are using virtual-dom, so instead of just dropping in our document directly, we parse the HTML strings to virtual-dom hyperscript, and tell virtual-dom to do the rendering.
-    This is what this module do. It parse html to virtual-dom hyperscript.
+    We're building a RSS reader, right? So to acomplish that, we'll get HTML strings (blog posts' content) that we want to show in our HTML, but we are using virtual-dom, so instead of just dropping in our document directly, we need to parse the HTML strings to virtual-dom hyperscript, and tell virtual-dom to do the rendering.
+    This is what this module does. It parse html to virtual-dom hyperscript.
 
   - dexie
 
-    Dexie is a wrapper for indexedDB which we'll use for offline storage of RSS feeds.
+    Dexie is a wrapper for indexedDB which we'll use for offline storage of the RSS feeds.
 
   - jquery
 
-    We don't really use most of jquery. We don't really need any of jquery. But we'll use it in few places just to see how RxJS can interoperate with other libs like the mighty jquery.
+    We don't really use most of the JQuery library. We could do it without. But we'll use it in few places just to see how RxJS can interoperate with other libs like the mighty JQuery.
 
   - rx
 
@@ -40,35 +57,35 @@ Let's quickly write some boilerplate to check if our setup is working as it shou
 - *Create /dist and /src*
 
   If you look in the webpack.config.production.js, you'll see following config:
- #+begin_src javascript
+#+begin_src javascript
   entry: './src/index',
   output: {
     path: path.join(__dirname, 'dist'),
     filename: 'app.js',
     publicPath: '/'
   },
- #+end_src
+#+end_src
 
   This means that webpack will enter our app from `./src/index.js` file, and will output the js after all pre-processing it need to do to `./dist/app.js` file. Let's quickly create `dist` and `src` directories.
 
- #+begin_src bash
+#+begin_src bash
   mkdir src dist
   echo "console.log('hello world');" >> src/index.js
- #+end_src
+#+end_src
 
 - *Check webpack is working*
 
   Running following command should create `dist/app.js` file. If it does, our setup is working and we’re good to go.
- #+begin_src bash
+#+begin_src bash
   npm run build
- #+end_src
+#+end_src
   
   We're using npm to run our scripts
 
 - *Create index.html*
 
   This is the only html file we’ll write in this whole tutorial. It’s only used as an entry point for including our `dist/app.js` which will take the wheel of our app.
-  #+begin_src xml
+#+begin_src xml
   <!doctype html>
   <html lang="en">
     <head>
@@ -81,16 +98,16 @@ Let's quickly write some boilerplate to check if our setup is working as it shou
     </body>
   </html>
 
-  #+end_src
+#+end_src
 
 - *Check webpack-dev-server*
 
   We'll use webpack-dev-server for live-reloading. It can do more fancy tasks, but we'll not use 'em.
   Runnng following command should start the webpack server and we'll be able to see `hello world` logged to javascript console at http://localhost:8080
 
- #+begin_src bash
+#+begin_src bash
   npm start
- #+end_src
+#+end_src
  
  Agin we are using Webpack to run our server and if you want to see the setup files look in `server.js`.
 
