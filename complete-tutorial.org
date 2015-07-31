@@ -204,35 +204,35 @@ Let's quickly write some boilerplate to check if our setup is working as it shou
 - *Create /dist and /src*
 
   If you look in the webpack.config.production.js, you'll see following config:
- #+begin_src javascript
+#+begin_src javascript
   entry: './src/index',
   output: {
     path: path.join(__dirname, 'dist'),
     filename: 'app.js',
     publicPath: '/'
   },
- #+end_src
+#+end_src
 
   This means that webpack will enter our app from `./src/index.js` file, and will output the js after all pre-processing it need to do to `./dist/app.js` file. Let's quickly create `dist` and `src` directories.
 
- #+begin_src bash
+#+begin_src bash
   mkdir src dist
   echo "console.log('hello world');" >> src/index.js
- #+end_src
+#+end_src
 
 - *Check webpack is working*
 
   Running following command should create `dist/app.js` file. If it does, our setup is working and we’re good to go.
- #+begin_src bash
+#+begin_src bash
   npm run build
- #+end_src
+#+end_src
   
   We're using npm to run our scripts
 
 - *Create index.html*
 
   This is the only html file we’ll write in this whole tutorial. It’s only used as an entry point for including our `dist/app.js` which will take the wheel of our app.
-  #+begin_src xml
+#+begin_src xml
   <!doctype html>
   <html lang="en">
     <head>
@@ -245,16 +245,16 @@ Let's quickly write some boilerplate to check if our setup is working as it shou
     </body>
   </html>
 
-  #+end_src
+#+end_src
 
 - *Check webpack-dev-server*
 
   We'll use webpack-dev-server for live-reloading. It can do more fancy tasks, but we'll not use 'em.
   Runnng following command should start the webpack server and we'll be able to see `hello world` logged to javascript console at http://localhost:8080
 
- #+begin_src bash
+#+begin_src bash
   npm start
- #+end_src
+#+end_src
  
  Agin we are using Webpack to run our server and if you want to see the setup files look in `server.js`.
 
@@ -486,22 +486,22 @@ Let's first remove everything from index.js from previous step, and start with a
 
 - *Import Virtual-DOM*
 
-  #+begin_src javascript
+#+begin_src javascript
     import {h} from 'virtual-dom';
     import createElement from 'virtual-dom/create-element';
-  #+end_src
+#+end_src
 
 - *Hello world*
 
   `h` is a function provided by virtual-dom for creating hyperscript. The hyperscript created using `h` is then passed to `createElement` to create a virtual-node or vNode, which then is put into the HTML page.
   Let's quickly create a hello vDOM.
 
-  #+begin_src javascript
+#+begin_src javascript
   let hw = h('h1', {className: 'hello'}, ["Hello World"]);
   let hwNode = createElement(hw);
 
   document.body.appendChild(hwNode);
-  #+end_src
+#+end_src
 
   `h` takes these arguments:
   - tag name      : {string}
@@ -525,15 +525,15 @@ Let's first remove everything from index.js from previous step, and start with a
 
   But this is for rendering once, right? The reason we're using virtual-dom is to make optimal DOM updates. To do the updates on the DOM, we need to import `diff` and `patch` from virtual-dom.
 
-  #+begin_src javascript
+#+begin_src javascript
   import diff from 'virtual-dom/diff';
   import patch from 'virtual-dom/patch';
-  #+end_src
+#+end_src
 
   Virtual-dom always keep one copy of the DOM it has rendered in memory. When we want to make some update in the DOM, we just recreate the whole view, and tell virtual-dom to render the new one. At this point, it diff the new DOM with the old copy it has, and patch the previous view with the diff.
   An example of a counter built using `setInterval` and virtual DOM would look like this:
 
-  #+begin_src javascript
+#+begin_src javascript
   let render = (count) => <h1 className='hello-world'>Hello World {count + ''}</h1>;
   //we did a `count = ''` above because `h` can't handle integers in this case, it need strings
 
@@ -559,7 +559,7 @@ Let's first remove everything from index.js from previous step, and start with a
     view = newView;
 
   }, 1000);
-  #+end_src
+#+end_src
 
   Tada!
 
@@ -569,7 +569,7 @@ Let's first remove everything from index.js from previous step, and start with a
 
   But hey! We are using Rx to use the shining asynchronous data streams, right? setTimeout looks like a good place to try our hands on. It is asynchronous, and emits events more than once; in other words, perfect to replace with Observable. Let's do that.
 
-  #+begin_src javascript
+#+begin_src javascript
   import {Observable} from 'rx';
 
   let render = (count) => <h1 className='hello-world'>Hello World {count + ''}</h1>;
@@ -588,7 +588,7 @@ Let's first remove everything from index.js from previous step, and start with a
         view = newView;
       }
     );
-  #+end_src
+#+end_src
 
   Sweet! Isn't it? Go eat some candy if you said no.
 
@@ -891,7 +891,7 @@ The takeaway from this issue is that if we ever see nothing rendering on the scr
 
   Consistency reminds us, what a bunch of hypocrites we are! Our components return a function which returns an Observable of views (hyperscript), but look at the `greeting` component. It doesn't! We shall respect the moral code and make it consistent. Let's convert it to return an Observable.
 
-  #+begin_src javascript
+#+begin_src javascript
   //components/greeting.js
   import h from 'virtual-dom/h';
   import {Observable} from 'rx';
@@ -899,11 +899,11 @@ The takeaway from this issue is that if we ever see nothing rendering on the scr
   let render_ = () => Observable.return(<h1>Hello World</h1>);
 
   export default render_;
-  #+end_src
+#+end_src
 
   ~Observable.return~ creates an Observable which only returns one value that we pass it. Now we need to modify `components/main.js` too.
 
-  #+begin_src javascript
+#+begin_src javascript
     import h from 'virtual-dom/h';
     import {Observable} from 'rx';
 
@@ -926,7 +926,7 @@ The takeaway from this issue is that if we ever see nothing rendering on the scr
           );
 
     export default render_;
-  #+end_src
+#+end_src
 
   Remember the ~Observable.combineLatest~? I hope you do.
 
@@ -938,7 +938,7 @@ The takeaway from this issue is that if we ever see nothing rendering on the scr
 
   Let's clean up the index.js to turn our vDOM rendering more re-useable. Turn the *Renderer* to a class perhaps? Or a closure may be?
 
-  #+begin_src javascript
+#+begin_src javascript
   //index.js
   import {Observable} from 'rx';
 
@@ -978,11 +978,11 @@ The takeaway from this issue is that if we ever see nothing rendering on the scr
 
   let view_ = mainView_();
   render(view_, baseDOMNode);
-  #+end_src
+#+end_src
 
   Let's separate the concerns even further and move vDOM renderer to its own file. We wanna keep our index.js file as clean as we can. Create a file ~src/renderer.js~:
 
-  #+begin_src javascript
+#+begin_src javascript
   //renderer.js
   import {h} from 'virtual-dom';
   import createElement from 'virtual-dom/create-element';
@@ -1016,11 +1016,11 @@ The takeaway from this issue is that if we ever see nothing rendering on the scr
   };
 
   export default render;
-  #+end_src
+#+end_src
 
   And then we can change our `index.js` to this:
 
-  #+begin_src javascript
+#+begin_src javascript
   //index.js
   import mainView_ from './components/main';
   import render from './renderer';
@@ -1028,7 +1028,7 @@ The takeaway from this issue is that if we ever see nothing rendering on the scr
   let view_ = mainView_();
 
   render(view_, document.getElementById('app'));
-  #+end_src
+#+end_src
 
   Now that's what we call a clean main file ^_^
 
@@ -1626,7 +1626,7 @@ Our sidebar is way too empty, let's add some controls to it.
 
   Create a file: ~components/sidebar-filter-widget.js~
 
-  #+begin_src javascript
+#+begin_src javascript
   //components/sidebar-filter-widget.js
 
   import h from 'virtual-dom/h';
@@ -1644,11 +1644,11 @@ Our sidebar is way too empty, let's add some controls to it.
         Observable.return(view())
 
   export default render_;
-  #+end_src
+#+end_src
 
   We need to update our ~components/sidebar.js~ too:
 
-  #+begin_src javascript
+#+begin_src javascript
   //components/sidebar.js
   import {Observable} from 'rx';
   import h from 'virtual-dom/h';
@@ -1674,13 +1674,13 @@ Our sidebar is way too empty, let's add some controls to it.
     );
 
   export default render_;
-  #+end_src
+#+end_src
 
   *Interactivity in feed filter widget*
 
   Let's add some interactivity to our widget. We wanna switch the ~active~ class to the appropriate button on click.
 
-  #+begin_src javascript
+#+begin_src javascript
   //components/sidebar-filter-widget.js
   import h from 'virtual-dom/h';
   import {Observable} from 'rx';
@@ -1711,7 +1711,7 @@ Our sidebar is way too empty, let's add some controls to it.
 
 
   export default render_;
-  #+end_src
+#+end_src
 
   We get the clicks Observable with ridiculously simple eventing system we setup earlier, and switch classes on the target element. Not we're not using jQuery for switching classes, because of which our code may not work on some older browsers. But you know what? Fuck it. We don't want to support older browsers, not in our play time at least.
 
@@ -1721,7 +1721,7 @@ Our sidebar is way too empty, let's add some controls to it.
 
   Create a file: ~components/sidebar-fetch-n-add-widget.js~
 
-  #+begin_src javascript
+#+begin_src javascript
   //components/sidebar-fetch-n-add-widget.js
   import h from 'virtual-dom/h';
   import {Observable} from 'rx';
@@ -1741,11 +1741,11 @@ Our sidebar is way too empty, let's add some controls to it.
         .return(view());
 
   export default render_;
-  #+end_src
+#+end_src
 
   We also need to update ~components/sidebar.js~:
 
-  #+begin_src javascript
+#+begin_src javascript
   //components/sidebar.js
   import {Observable} from 'rx';
   import h from 'virtual-dom/h';
@@ -1774,13 +1774,13 @@ Our sidebar is way too empty, let's add some controls to it.
     );
 
   export default render_;
-  #+end_src
+#+end_src
 
   *Interactivity*
 
   Notice that we have an ~<input>~ field for adding a feed, but it has ~display: hidden~. We want to toggle it when we click ~Add New Feed~ button.
 
-  #+begin_src javascript
+#+begin_src javascript
   import h from 'virtual-dom/h';
   import {Observable} from 'rx';
 
@@ -1814,7 +1814,7 @@ Our sidebar is way too empty, let's add some controls to it.
   }
 
   export default render_;
-  #+end_src
+#+end_src
 
   We could have simply toggled a class on our ~<input>~ field, but this is another way I wanted to demonstrate. Instead of toggeling classes in side-effect code, we can do it in more pure way like this. We create an Observable for inline-styles of the input block, and create an Observable which emits ~{display: 'none'}~ or ~{display: 'inline-block'}~ alternatively when user clicks the `Add New Feed` button. ~scan~ is similar to ~reduce~, Google it.
 
@@ -1824,7 +1824,7 @@ Our sidebar is way too empty, let's add some controls to it.
 
   Create ~components/sidebar-feed-list.js~ file:
 
-  #+begin_src javascript
+#+begin_src javascript
   //components/sidebar-feed-list.js
   import h from 'virtual-dom/h';
   import {Observable} from 'rx';
@@ -1856,11 +1856,11 @@ Our sidebar is way too empty, let's add some controls to it.
   }
 
   export default render_;
-  #+end_src
+#+end_src
 
   Notice we used fake feeds to quickly get done with the widget first. Let's also add some interactivity (change `active` class on feed change).
 
-  #+begin_src javascript
+#+begin_src javascript
     .
     .
     let selectFeedClicks_ = clicksByClass_('sidebar-feed');
@@ -1878,7 +1878,7 @@ Our sidebar is way too empty, let's add some controls to it.
     .
     .
     .
-  #+end_src
+#+end_src
 
 *** Models
 We are trying our best to keep the components isolated, but it won't always be possible/feasible to do so. Applications have state, that's their job. But we can keep our state properly so it won't create a mess around. Let's create Models to provide sane interface for our global state (/data).
@@ -1995,24 +1995,24 @@ Dexie's interface is somewhat similar to that of a SQL database. If you've used 
 
   First we need to create a store in dexie. It's like creating a database in which we'll then create tables for ~feeds~ and ~posts~.
 
-  #+begin_src javascript
+#+begin_src javascript
   //db.js
   import Dexie from 'dexie';
 
   let db = new Dexie('yarr');
-  #+end_src
+#+end_src
 
 - *Create Tables*
 
   Next step, to create tables:
 
-  #+begin_src javascript
+#+begin_src javascript
   //The object store will allow any properties on your stored objects but you can only query them by indexed properties
   db.version(1).stores({
     feeds: 'url, name',
     posts: 'link, title, author, publishedDate, categories, read, feedUrl'
   });
-  #+end_src
+#+end_src
 
   ~db.version(1)~ is useful when we later need to migrate our data or something like that (we won't do it today). We created two stores as we discussed, but notice ~posts~ has no column for `content`. We actually don't need to mention all the fields we wanna store. We only need to mention the fields which we wanna index, so we can query with them later.
 
@@ -2020,14 +2020,14 @@ Dexie's interface is somewhat similar to that of a SQL database. If you've used 
 
   That's all it needs to setup the db. We can now call ~db.open()~ and start working with dexie right away.
 
-  #+begin_src javascript
+#+begin_src javascript
   //db.js
   db.open();
-  #+end_src
+#+end_src
 
   Our ~src/db.js~ looks like this at the moment:
 
-    #+begin_src javascript
+#+begin_src javascript
     import Dexie from 'dexie';
 
     let db = new Dexie('yarr');
@@ -2044,7 +2044,7 @@ Dexie's interface is somewhat similar to that of a SQL database. If you've used 
     window.Feeds = db.feeds;
 
     export default {db, Posts: db.posts, Feeds: db.feeds};
-  #+end_src
+#+end_src
 
   To access our ~posts~ and ~feeds~ stores, we need to use ~db.<storeName>~ sytanx. So we are exporting them as ~Posts~ and ~Feeds~. We've also put them on `window` so we can play around with them in console.
 
@@ -2079,17 +2079,17 @@ So how do we actually use offline storage in our app? We'll go for `offline-firs
 
   Let's open ~src/models/feeds.js~ and import ~Feeds~ table from ~db.js~
 
-  #+bebgin_src javascript
+#+bebgin_src javascript
   //models/feeds.js
   import {Feeds} from '../db';
   .
   .
   .
-  #+end_src
+#+end_src
 
   Since we're going offline-first, let's first add feeds to db:
 
-  #+begin_src javascript
+#+begin_src javascript
   //models/feeds.js
   .
   .
@@ -2119,13 +2119,13 @@ So how do we actually use offline storage in our app? We'll go for `offline-firs
   .
   .
   .
-  #+end_src
+#+end_src
 
   Cool! But we are still returning the feeds by fetching them, we shall return the ~feeds_~ by fetching them from dexie-db since we're saving our feeds in it anyway.
 
   For fetching data, dexie.js provides ~db.<table>.toArray()~ to give all the documents in the dexie table as a promise of array. And how do we get value from a promise? ~flatMap~ ftw!
 
-  #+begin_src javascript
+#+begin_src javascript
   .
   .
   .
@@ -2134,7 +2134,7 @@ So how do we actually use offline storage in our app? We'll go for `offline-firs
         .do(x => console.log(x));
 
   export default {feeds_};
-  #+end_src
+#+end_src
 
   *An error along Observable chain*
 
@@ -2142,7 +2142,7 @@ So how do we actually use offline storage in our app? We'll go for `offline-firs
 
   Our ~posts-list~ view broke because our feeds don't have posts any more, but why did ~sidebar-feeds-list~ broke? Take a look at ~src/components/sidebar-feed-list.js~, we are returning an array of feeds now, not a stream of one feed at a time. We can easily convert this array to an Observable of single feeds (guess how), but we won't. Returning an array of feeds make our job of re-rendering the sidebar-feed-list much more easier whenever a new feed is added or removed. Let's change ~src/components/sidebar-feed-list.js~ to accommodate new changes:
 
-  #+begin_src javascript
+#+begin_src javascript
   // components/sidebar-feed-list.js
   .
   .
@@ -2166,18 +2166,18 @@ So how do we actually use offline storage in our app? We'll go for `offline-firs
   }
 
   export default render_;
-  #+end_src
+#+end_src
 
   This should work, right? But it doesn't! Why not? If we look in the console, there's an error saying:
 
-  #+begin_src bash
+#+begin_src bash
   Error occured somewhere along Observable chain TypeError: posts.map is not a function
       at http://localhost.com:8080/dist/app.js:11638:19
-  #+end_src
+#+end_src
 
   This line is from ~console.debug~ we have put in our ~src/renderer.js~. This is expected behavior from Observable. Whenever any error occurs along the Observable chain, the chain stops unless we ask it not to. That's what is happening here. Let's change ~src/models/posts.js~ to stop this error temporarily.
 
-  #+begin_src javascript
+#+begin_src javascript
   // models/posts.js
   import {feeds_} from './feeds';
   import {Observable} from 'rx';
@@ -2185,11 +2185,11 @@ So how do we actually use offline storage in our app? We'll go for `offline-firs
   let posts_ = Observable.return([]);
 
   export default {posts_};
-  #+end_src
+#+end_src
 
   Awesome! Sidebar has the feeds list (as expected) now. But there's another error in the console which occurs when we add those default feeds to dexie.db. It's not affecting our app because it's not part of the main Observable change that end up being rendered. But we should get rid of it. This error occurs when we try to add items with same primary_key to dexie-db. We try to add feeds to the `Feeds` table every time we refresh the page. We should check if there are any feeds in the `Feeds` and add feeds only if there are none. Let's do this:
 
-  #+begin_src javascript
+#+begin_src javascript
   .
   .
   .
@@ -2208,7 +2208,7 @@ So how do we actually use offline storage in our app? We'll go for `offline-firs
   .
   .
   .
-  #+end_src
+#+end_src
 
   ~Feeds.count()~ give us a promise of number of items in our `Feeds` dexie table. If the number of feeds in our dexie-db is 0, we return an Observable of feed urls, otherwise an empty one (from empty array) which is like a no-op. This got us rid from that error in console. Cool!
 
@@ -2216,7 +2216,7 @@ So how do we actually use offline storage in our app? We'll go for `offline-firs
 
   Noticed we aren't adding posts anywhere? We should add posts to our ~Posts~ dexie table whenever we add a feed. Let's rework that ~addFeed_~ function in ~src/models/feeds.js~:
 
-  #+begin_src javascript
+#+begin_src javascript
   //models/feeds.js
   .
   .
@@ -2250,7 +2250,7 @@ So how do we actually use offline storage in our app? We'll go for `offline-firs
   .
   .
   .
-  #+end_src
+#+end_src
 
   We created a helper method ~addPostToDb~ to add post to dexie table `Posts` and give us an array of status of operation. And now when we fetch a feed, we add it to ~Feeds~ table, and then create another Observable from the ~feed.entries~ array, add each post to ~Posts~, and return that Observable. Why are we doing it this way? Remember what happen when any error happen on an Observable chain? It goes straight to subscribe method, and stop the chain. Error handling is one of killer features of Rx. To reliably add the posts and feeds, we put them on the Observable chain (and not just make some random ~addPostToDb~ operations). So if any post fails to be added to the dexie db, we could catch the error (although we will not :P).
 
@@ -2264,7 +2264,7 @@ So how do we actually use offline storage in our app? We'll go for `offline-firs
 
   Now that we have our posts added to the db, let's serve them to our ~posts-list~ component. Open up ~src/models/posts.js~:
 
-  #+begin_src javascript
+#+begin_src javascript
   import {Posts} from '../db';
   import {Observable} from 'rx';
 
@@ -2272,13 +2272,13 @@ So how do we actually use offline storage in our app? We'll go for `offline-firs
         .fromPromise(Posts.orderBy('publishedDate').reverse().toArray());
 
   export default {posts_};
-  #+end_src
+#+end_src
 
   And it just worked! That's like super cool, isn't it? Go eat some candy if you said no.
 
   Now that we are getting *all* our posts in a single array, we can do a little change in ~src/components/posts-list.js~:
 
-  #+begin_src javascript
+#+begin_src javascript
   // src/components/posts-list.js
   .
   .
@@ -2288,7 +2288,7 @@ So how do we actually use offline storage in our app? We'll go for `offline-firs
         .map(view)
         .startWith(view());
   export default render_;
-  #+end_src
+#+end_src
 
 
 Awesome! With that done, we can move on to next step and try to make our database reactive. We'll aim for a functionality that whenever we add/remove/change anything in our offline database (IndexedDB that is), anything using that data (in UI or otherwise) shall respond too. I love this feature in Meteor (although Meteor's client side db is not persistent by default).
@@ -2319,7 +2319,7 @@ Now if we can convert these hooks to Observable, and merge them such that when a
 
   Let's start with making a helper function that will convert a hook into an Observable. Open up ~src/db.js~:
 
-  #+begin_src javascript
+#+begin_src javascript
   // db.js
   import {Observable} from 'rx';
   .
@@ -2347,7 +2347,7 @@ Now if we can convert these hooks to Observable, and merge them such that when a
     Feeds: db.feeds,
     reactiveDexieTable_
   };
-  #+end_src
+#+end_src
 
   ~reactiveDexieTable_~ shall give us an Observable for listening to one of ~creating~, ~updating~, ~deleting~ hooks on a dexie table.
 
@@ -2358,11 +2358,11 @@ Now if we can convert these hooks to Observable, and merge them such that when a
 - *Test reactive dexie table*
 
   Let's do a quick test run. We'll create an Observable for listening to `creating` hook, clear all the feeds, refresh the browser and see if this Observable emits. Put this anywhere in ~src/db.js~:
-  #+begin_src javascript
+#+begin_src javascript
   reactiveDexieTable_(db.feeds, 'creating')
     .do(x => console.log('WHOA! Hook is working!', x))
     .subscribe();
-  #+end_src
+#+end_src
 
   Open console in your browser, do a ~Feeds.clear()~ and ~Posts.clear()~, and refresh. If you see that =Whoa!= message, our new Observable is working. Awesome! Remove code added above.
 
@@ -2370,7 +2370,7 @@ Now if we can convert these hooks to Observable, and merge them such that when a
 
   Let's do something little more useful. Noticed we had to clear both ~Feeds~ and ~Posts~ above (so re-adding ~Posts~ won't show an error). Keeping ~Posts~ in db don't make any sense when we've removed the `Feed` they belong to. Let's use our awesome new reactive table Observable and delete all the Posts that belong to the feed whenever we delete the feed.
 
-  #+begin_src javascript
+#+begin_src javascript
   .
   .
   .
@@ -2386,7 +2386,7 @@ Now if we can convert these hooks to Observable, and merge them such that when a
   .
   .
   .
-  #+end_src
+#+end_src
 
   Now go to browser's console and do a ~Feeds.clear()~ again. You'll see ~N posts deleted~ messages, and if you refresh the page, you'll see Posts are all gone.
 
@@ -2394,7 +2394,7 @@ Now if we can convert these hooks to Observable, and merge them such that when a
 
   That's all great, let's use this in our UI. We'll start with feeds. Open ~src/models/feeds.js~:
 
-  #+begin_src javascript
+#+begin_src javascript
   import {Feeds, reactiveDexieTable_} from '../db';
   .
   .
@@ -2409,7 +2409,7 @@ Now if we can convert these hooks to Observable, and merge them such that when a
         .flatMap(() => Feeds.toArray()).share();
 
   export default {feeds_};
-  #+end_src
+#+end_src
 
   We create 3 Observable to inform us whenever ~Feeds~ are updated, deleted or added, and we ~Observable.merge~ them so that we get a notification when either one of these events happen. Can you guess why we did ~.startWith('')~ here? Without ~startWith~, the Observable will keep waiting for one of the 3 events to happen. We don't want that, we want to send feeds to our UI on initial refresh too, so we start with an empty notification, and send feeds every time page refreshes, and then we send them every time something happens in our ~Feeds~ table.
 
@@ -2419,7 +2419,7 @@ Now if we can convert these hooks to Observable, and merge them such that when a
 
   How do we make Posts reactive now? Exactly how we made Feeds reactive, dumbass!
 
-  #+begin_src javascript
+#+begin_src javascript
   // models/posts.js
   import {Posts, reactiveDexieTable_} from '../db';
   import {Observable} from 'rx';
@@ -2434,7 +2434,7 @@ Now if we can convert these hooks to Observable, and merge them such that when a
         .flatMap(() => Posts.orderBy('publishedDate').reverse().toArray());
 
   export default {posts_};
-  #+end_src
+#+end_src
 
   Now if you do ~Feeds.clear()~ in console, you'll see posts-list get all cleared too, and you might also see posts getting added dynamically when you refresh the page later.
 
@@ -2465,7 +2465,7 @@ We'll now add functionality to all those control widgets in the Sidebar. It'll b
 
   Open up ~src/components/sidebar-feed-list.js~
 
-  #+begin_src javascript
+#+begin_src javascript
   // components/sidebar-feed-filter.js
   import {dataAttrAsClass} from '../utils';
   .
@@ -2485,11 +2485,11 @@ We'll now add functionality to all those control widgets in the Sidebar. It'll b
   .
   .
   export {feedFilters_};
-  #+end_src
+#+end_src
 
   That's straight forward I think. You might be wondering what that `dataAttrAsClass` is. This is what it is:
 
-  #+begin_src javascript
+#+begin_src javascript
   //utils.js
   .
   .
@@ -2509,21 +2509,21 @@ We'll now add functionality to all those control widgets in the Sidebar. It'll b
   .
   .
   .
-  #+end_src
+#+end_src
 
   I couldn't figure out how to put `data-custom=something` with our HTMLish syntax, so I added the `data-filter=all` etc like this in the markup:
 
-  #+begin_src xml
+#+begin_src xml
   <li className="sidebar-control filter-posts data-filter-all">All</li>
   <li className="sidebar-control filter-posts active data-filter-unread">Unread</li>
   <li className="sidebar-control filter-posts data-filter-read">Read</li>
-  #+end_src
+#+end_src
 
   Notice ~data-filter-all~ class. That's how we get to know which filter user has clicked on. Yea it's hackish, suggest me a better way to do this. I'll appreciate it (what? you want a trophy?).
 
   Let's import this `feedFilters_` Observable in `components/main.js` and see what it provide us:
 
-  #+begin_src javascript
+#+begin_src javascript
   //components/main.js
   import {feedFilters_} from './sidebar-feed-filter';
   .
@@ -2532,13 +2532,13 @@ We'll now add functionality to all those control widgets in the Sidebar. It'll b
   .subscribe(x => console.log(x));
   .
   .
-  #+end_src
+#+end_src
 
   We get "read", "all" and "unread" in console on clicking the filter buttons. Interesting, let's convert it to what we want to filter:
 
   But wait, why are we directly using `sidebar-feed-filter` in our main? main view don't need to know about it, and it should not. Besides, feed-filter's parent is sidebar, and sidebar is answerable to main, not feed-filter. So we'll import the feedFilters_ in `sidebar` first, which will export it again for main.
 
-  #+begin_src javascript
+#+begin_src javascript
   // components/sidebar.js
   import {feedFilters_ as filterWidgetFilters_} from './sidebar-feed-filter';
   .
@@ -2562,11 +2562,11 @@ We'll now add functionality to all those control widgets in the Sidebar. It'll b
 
   export default render_;
   export {feedFilters_};
-  #+end_src
+#+end_src
 
   We also did some post-processing on our filters to produce what should be most easily filterable by posts-list view. We'll now import it in main from `sidebar`,
 
-  #+begin_src javascript
+#+begin_src javascript
   //components/main.js
   import sidebar_, {feedFilters_} from './sidebar';
   .
@@ -2576,11 +2576,11 @@ We'll now add functionality to all those control widgets in the Sidebar. It'll b
   .subscribe(x => console.log(x));
   .
   .
-  #+end_src
+#+end_src
 
   Now our feedFilters_ Observable give us ~{read: 'true|false'}|{}~, the end product that we want to filter. According to our plan, we have to pass it to `posts-list` view for consumption.
 
-  #+begin_src javascript
+#+begin_src javascript
   //components/main.js
   .
   .
@@ -2592,11 +2592,11 @@ We'll now add functionality to all those control widgets in the Sidebar. It'll b
   );
   .
   .
-  #+end_src
+#+end_src
 
   And we consume them in `components/posts-list.js`:
 
-  #+begin_src javascript
+#+begin_src javascript
   //components/posts-list.js
   .
   .
@@ -2622,7 +2622,7 @@ We'll now add functionality to all those control widgets in the Sidebar. It'll b
   .startWith(view());
 
   export default render_;
-  #+end_src
+#+end_src
 
   If that looks like a mess to you, well then it's sad; because it's your homework to figure out how we are doing the filtering. You better figure it out before moving ahead 'cause we are going to make it even more messier. (/Hint:/ It's not a mess)
 
@@ -2634,7 +2634,7 @@ We'll now add functionality to all those control widgets in the Sidebar. It'll b
 
   What we are going to do now is that we'll generate a similar Observable (as from filter-feed) from feed-list, and we'll somehow combine it with feed-filter Observable. It'll give us advantage that we could keep both filters active at a time without any extra work.
 
-  #+begin_src javascript
+#+begin_src javascript
   // components/sidebar-feed-list.js
   .
   .
@@ -2649,7 +2649,7 @@ We'll now add functionality to all those control widgets in the Sidebar. It'll b
 
   export default render_;
   export {selectedFeedUrl_};
-  #+end_src
+#+end_src
 
   We have a special entry in feed-list called "All", which is to remove the selected-feed filters and show posts from all feeds.
 
@@ -2657,7 +2657,7 @@ We'll now add functionality to all those control widgets in the Sidebar. It'll b
 
   Now let's import this Observable in our sidebar.js and combine it with `feedFilters_`
 
-  #+begin_src javascript
+#+begin_src javascript
   // components/sidebar.js
   import {selectedFeedUrl_} from './sidebar-feed-list';
   .
@@ -2690,7 +2690,7 @@ We'll now add functionality to all those control widgets in the Sidebar. It'll b
 
   export default render_;
   export {feedFilters_};
-  #+end_src
+#+end_src
 
   Try it out. This will give us two of our widgets working!
 
@@ -2742,7 +2742,7 @@ Well, I hope the code is self explanatory, and I've added comments with it, so r
 
 > *NOTE*:
 
-  #+begin_src javascript
+#+begin_src javascript
           .flatMap(entry => Posts.get(entry.link))    //(dexie gives an error for that)
           .zip(
             newPosts_,                                //I am sure there's a better way of doing this
@@ -2750,17 +2750,17 @@ Well, I hope the code is self explanatory, and I've added comments with it, so r
               return {existing, newEntry};
             }
           )
-  #+end_src
+#+end_src
 
   I found the better way of doing this. Turns out I am a douche and don't read docs properly, `flatMap` has an overloaded form in which it can recieve 2 functions. Second function is given the `outerData` and `innerData` as arguments, and can replace the zip operation. So we can write this code as:
 
-  #+begin_src javascript
+#+begin_src javascript
           .flatMap(
             entry => Posts.get(entry.link),
             (newEntry, existing) => {
                 return {existing, newEntry};
             })
-  #+end_src
+#+end_src
 
   I am not changing it in rest of the tutorial atm (kinda busy), but keep in mind this is the *correct* way of solving this pattern.
 
