@@ -26,13 +26,13 @@ let feeds_ = Observable
 export {feeds_};
 #+end_src
 
-That should not be a lot to take in one bite. We imported ~ajax~ from jquery, and created a helper method to make a request and return it as a promise. Now why are we making a request to ~http://ajax.googleapis.com/ajax/services/feed/load?v=1.0&num=30&q=${url}~ ? Turns out, not all RSS feed generators put proper ~Allow-Origin~ header on RSS feed responses, so browser rubs a Cross Origin Error in our face. Google provide this nice API which can parse the RSS feed and provide us response as JSONP. Awesome!
+That shouldn't be a lot to take in one bite. We imported ~ajax~ from jquery, and created a helper method to make a request and return it as a promise. Now why are we making a request to ~http://ajax.googleapis.com/ajax/services/feed/load?v=1.0&num=30&q=${url}~ ? Turns out, not all RSS feed generators put proper ~Allow-Origin~ header on RSS feed responses, so the browser will rub a Cross Origin Error in our face. Google provide this nice API which can parse the RSS feed and provide us a response as JSONP. Awesome!
 
-Next we wanna create an Observable of RSS feeds. We are starting with an array of feed URLs to, so we convert it to an Observable with ~Observable.from~, and ~flatMap~ each url with ~fetchFeed~. Hmmm...what could that do?
+Next we wanna create an Observable of RSS feeds. We are starting with an array of feed URLs too, so we convert it to an Observable with ~Observable.from~, and ~flatMap~ each url with ~fetchFeed~. Hmmm...what could that do?
 
-Let's quickly create a ~postsList~ component, and import our feeds in it. Follow me real quick.
+Let's quickly create a ~postsList~ component, and import our feeds into it. Follow me real quick.
 
-Delete `components/count-clicks.js` we created in previous step. And create ~components/posts-list.js~.
+Delete `components/count-clicks.js` we created in our previous step. And create ~components/posts-list.js~.
 
 #+begin_src javascript
 //components/posts-list.js
@@ -103,7 +103,7 @@ feeds_
 export default render_;
 #+end_src
 
-In console we can see /jQuery response/ objects logged. In ~src/feeds.js~, we can see we made requests for each feed-url with a function ~fetchFeed~ which returns a promise. And we do so in ~flatMap~. Remember what flatMap does? It flattens the Observable, and give us its value(s). RxJS support promises and implicitly convert them to Observable for us. So we can do ~flatMap(fetchFeeds)~, and get an Observable of responses. That's great! But we want Observable of blog-posts, so let's process the responses and return blog posts instead.
+In console we can see /jQuery response/ objects logged. In ~src/feeds.js~, we can see we made requests for each feed-url with a function ~fetchFeed~ which returns a promise. We do so inside a ~flatMap~. Remember what flatMap does? It flattens a two dimentional Observable (like 2 levels deep arrays), and give us a single value(s). RxJS supports promises and implicitly convert them to Observable for us. So we can do ~flatMap(fetchFeeds)~, and get an Observable of the responses. That's great! But we want Observable of blog-posts, so let's process the responses and return blog posts instead.
 
 #+begin_src javascript
 //feeds.js
@@ -118,7 +118,7 @@ let feeds_ = Observable
 export {feeds_};
 #+end_src
 
-There we go. It'll log arrays of blog-posts in console. We can use this Observable to create our views I guess. Let's get back in ~components/posts-list.js~:
+There we go. It'll log arrays of blog-posts in the console. We can use this Observable to create our views I guess. Let's get back in ~components/posts-list.js~:
 
 #+begin_src javascript
 //components/posts-list.js
@@ -132,9 +132,9 @@ let render_ = () => {
 }
 #+end_src
 
-We can now see the list of post titles on our page. But, the posts for one feed gets rendered, and then gets replaced by next feed, eventually only one feed's posts appear. Can you guess why? Well of course you can, you're smart, ain't you?
+We can now see the list of post titles on our page. But the posts for one feed gets rendered, and then gets replaced by the next feed, eventually only one feed's posts appear. Can you guess why? Well of course you can, you're smart, ain't you?
 
-We need to collect all the feeds in one big array, otherwise every time `map` runs on a feed, it'll replace the previous view. How to we convert an array to a single value? ~reduce~ you said!
+We need to collect all the feeds in one big array, otherwise every time `map` runs on a feed, it'll replace the previous view. How do we convert an array to a single value? ~reduce~ you said!
 
 #+begin_src javascript
 //components/posts-list.js
@@ -149,7 +149,7 @@ let render_ = () => {
 }
 #+end_src
 
-Doing this looks like solving our problem at hand, but it will actually cause some trouble in future. But we will not tackle it now. We are building an RSS reader, an RSS reader without offline useability is simply stupid imo. We we'll have offline storage, which will change the way we approach modeling our data. So let's leave the feeds like this for the moment.
+Doing it this way looks like it will solve our problem at hand, but it will actually cause trouble in the future. But we will not tackle it right now. We are building an RSS reader, an RSS reader without offline useability is simply stupid imo. We will have offline storage, which will change the way we approach modeling our data. So let's leave the feeds like this for the moment.
 
 - *Proper Looks*
 
@@ -298,7 +298,7 @@ export default {
 }
 #+end_src
 
-View is much better now, isn't it? Go eat some candies if you said no.
+The view is much better now, isn't it? Go eat some candies if you said no.
 
 You would've noticed there's room for a sidebar there. Let's add the sidebar real quick. Create ~components/sidebar.js~
 
@@ -321,7 +321,7 @@ let render_ = () =>
 export default render_;
 #+end_src
 
-We of course need to change our ~components/main.js~ to accomodate the new view:
+Of course we need to change our ~components/main.js~ to accomodate for the new view:
 
 #+begin_src javascript
 import h from 'virtual-dom/h';
@@ -356,7 +356,7 @@ export default render_;
 
 If you have a view like this: [[http://i.imgur.com/ooeGuyX.png]]
 
-then we are good to go. Let's move on to next step, and add some controls to our sidebar. It's too empty.
+then we are good to go. Let's move on to the next step, and add some controls to our sidebar. It's looking too empty.
 
 #+begin_src bash
 git checkout 6-sidebar-controls-and-models
