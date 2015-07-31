@@ -1,9 +1,9 @@
 * Yarr : Delegated Events
 
 We have our pretty components system set up, but what about events? Users will be interacting with our app, right?
-Since we're taking so much "inspiration" from React, how do React handle events? Really? You want to get into those "onClick" stuff? I mean they are pretty, I've nothing against them, but given a choice I won't really vouch for them either. That said, I don't want to get into "when a component is ready and when it's re-rendered" events either.
+Since we're taking so much "inspiration" from React, how does React handle events? Really? You want to get into those "onClick" stuff? I mean they are pretty, I've nothing against them, but given a choice I won't really vouch for them either. That said, I don't want to get into "when a component is ready and when it's re-rendered" events either.
 
-Another hint, Observable are good at chaining operations (dead give away, *filter*). What if we use delegated events? Like put an event listener on ~document.body~, and filter for the target we want? Let's try this. Let's create a counting button component (and remove other components from our previous step).
+Another hint, Observable are good at chaining operations (dead give away, *filter*). What if we use delegated events? Like put an event listener on ~document.body~, and filter it to the target we want? Let's try this. Let's create a counting button component (and remove other components from our previous step).
 
 Our project shall look like this atm:
 
@@ -16,14 +16,16 @@ Our project shall look like this atm:
 │   │   └── main.js
 │   ├── index.js
 │   └── renderer.js
-└── webpack.config.js
+├── server.js
+├── webpack.config.js
+└── webpack.config.production.js
 #+end_src
 
-Also wipe-up the `components/main.js`.
+Also clean-up the `components/main.js`.
 
 - *Count clicks Component*
 
-Let's create a new component which will count the clicks we made to a button.
+Let's create a new component which will count the clicks that are made to a button.
 
 #+begin_src javascript
 //components/count-clicks.js
@@ -69,9 +71,9 @@ let render_ = () => Observable
 export default render_;
 #+end_src
 
-Great! Now we want to listen to click events on our ~.count-clicks-btn~. Virtual-DOM/React way of doing that is to provide a `onClick` handler in properties, but we don't want to do that. We want to use delegated events instead. Let's do that.
+Great! Now we want to listen to the click events on our ~.count-clicks-btn~. Virtual-DOM/React way of doing that is to provide an `onClick` handler in properties, but we don't want to do that way. We want to use delegated events instead. So let's do that.
 
-Create ~./src/events.js~ file. We'll host our source events code there, and make the events pass through a chain of Observable operators to get only the events we need.
+Create ~./src/events.js~ file. We'll put our source events code there, and make the events pass through a chain of Observable operators so we get only the events we need.
 
 #+begin_src javascript
 //src/events.js
@@ -94,7 +96,7 @@ let countBtnClicks_ = clicks_
 export {countBtnClicks_};
 #+end_src
 
-We have put a `click` event listener on body, and then we're filtering it by class name to get clicks only for our button. Let's import these events to our `countClicks` component and check by subscribing to it.
+We've put a `click` event listener on body, and then we're filtering it by 'class name' so we only get the clicks for our button. Let's import these events to our `countClicks` component and check by subscribing to it.
 
 #+begin_src javascript
 //components/count-clicks.js
@@ -106,7 +108,7 @@ countBtnClicks_
   .subscribe(x => console.log(x));
 #+end_src
 
-Voilla! it's working. We'll use this system of delegated events in our app. Let's make `events.js` code more re-useable.
+Voilla! it's working. We'll use this system of delegated events in our app. Let's make the `events.js` code more re-useable.
 
 #+begin_src javascript
 //events.js
@@ -198,7 +200,7 @@ export default render_;
 
 Our app is working! What kind of sorcery is this?
 
-Honestly, if you were paying attention this won't look like sorcery at all. ~countBtnCicks_~ gives us a notification (in form of event) every time user clicks our button, we convert that to an incrementing count. Next is ~startWith(0)~, remember why we need it? Without startWith, our renderer will keep waiting for countBtnClicks_ to emit at least once (because we use `combineLatest` to combine all views), and countBtnClicks_ will emit only if user clicks on the button. But there is no button rendered yet! To get out of this loop, we start it with an initial value.
+Honestly, if you were paying attention this won't look like sorcery at all. ~countBtnCicks_~ gives us a notification (in form of an event) every time the user clicks our button, we convert that to an incrementing count. Next is ~startWith(0)~, remember why we need it? Without startWith, our renderer will keep waiting for countBtnClicks_ to emit at least once (because we use `combineLatest` to combine all views), and countBtnClicks_ will emit only if user clicks on the button. But there is no button rendered yet! To get out of this loop, we start it with an initial value.
 
 Great! With that out of the way, we have our component system and events system in place, we can finally start building our app. Lol, I lied to you like 2 steps back that we're building Yarr back then. Can't believe you fell for that you dumb fuck.
 

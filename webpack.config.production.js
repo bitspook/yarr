@@ -1,21 +1,18 @@
 var webpack = require('webpack');
 var ExtractTextPlugin = require('extract-text-webpack-plugin');
+var path = require('path');
 
 module.exports = {
-  entry: [
-    'webpack-dev-server/client?http://localhost:8080',
-    'webpack/hot/dev-server',
-    './src/index'
-  ],
+  entry: './src/index',
   output: {
-    path: __dirname,
+    path: path.join(__dirname, 'dist'),
     filename: 'app.js',
-    publicPath: '/dist/'
+    publicPath: '/'
   },
   resolve: {
     extensions: ['', '.js']
   },
-  devtool: 'eval-source-map',
+  devtool: 'source-map',
   module: {
     loaders: [
       {
@@ -31,8 +28,8 @@ module.exports = {
         test: /\.scss$/,
         loader: ExtractTextPlugin.extract(
           'css?sourceMap!' +
-            'sass?sourceMap'
-        )
+          'sass?sourceMap'
+          )
       },
       {
         test: /\.css$/,
@@ -43,8 +40,17 @@ module.exports = {
     ]
   },
   plugins: [
-    new webpack.HotModuleReplacementPlugin(),
-    new webpack.NoErrorsPlugin(),
-    new ExtractTextPlugin('styles.css')
+    new ExtractTextPlugin('styles.css'),
+    new webpack.optimize.OccurenceOrderPlugin(),
+    new webpack.DefinePlugin({
+      'process.env': {
+        'NODE_ENV': JSON.stringify('production')
+      }
+    }),
+    new webpack.optimize.UglifyJsPlugin({
+      compress: {
+        warnings: false
+      }
+    })
   ]
 };
