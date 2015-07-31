@@ -39,13 +39,13 @@ Let's quickly write some boilerplate to check if our setup is working as it shou
 
 - *Create /dist and /src*
 
-  If you look in the webpack.config.js, you'll see following config:
+  If you look in the webpack.config.production.js, you'll see following config:
  #+begin_src javascript
-  entry: {
-    app: ['./src/index.js']
-  },
+  entry: './src/index',
   output: {
-    filename: 'dist/[name].js'
+    path: path.join(__dirname, 'dist'),
+    filename: 'app.js',
+    publicPath: '/'
   },
  #+end_src
 
@@ -58,14 +58,16 @@ Let's quickly write some boilerplate to check if our setup is working as it shou
 
 - *Check webpack is working*
 
-  Running following command should create `dist/app.js` file. If it does, our setup is working and we're good to go.
+  Running following command should create `dist/app.js` file. If it does, our setup is working and we’re good to go.
  #+begin_src bash
-  webpack -p
+  npm run build
  #+end_src
+  
+  We're using npm to run our scripts
 
 - *Create index.html*
 
-  This is the only html file we'll write in this whole tutorial. Only an entry point for including our `dist/app.js` which'll take the wheel.
+  This is the only html file we’ll write in this whole tutorial. It’s only used as an entry point for including our `dist/app.js` which will take the wheel of our app.
   #+begin_src xml
   <!doctype html>
   <html lang="en">
@@ -87,13 +89,14 @@ Let's quickly write some boilerplate to check if our setup is working as it shou
   Runnng following command should start the webpack server and we'll be able to see `hello world` logged to javascript console at http://localhost:8080
 
  #+begin_src bash
-  webpack-dev-server
+  npm start
  #+end_src
-
+ 
+ Agin we are using Webpack to run our server and if you want to see the setup files look in `server.js`.
 
 If all is working well. We can move on to next step.
 
 - *Checkout to next step*
- #+begin_src javascript
+#+begin_src javascript
   git checkout 1-hello-rx
- #+end_src
+#+end_src
