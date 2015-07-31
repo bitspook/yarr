@@ -292,7 +292,7 @@ The takeaway from this issue is that if we ever see nothing rendering on the scr
 
   Consistency reminds us, what a bunch of hypocrites we are! Our components return a function which returns an Observable of views (hyperscript), but look at the `greeting` component. It doesn't! We shall respect the moral code and make it consistent. Let's convert it to return an Observable.
 
-  #+begin_src javascript
+#+begin_src javascript
   //components/greeting.js
   import h from 'virtual-dom/h';
   import {Observable} from 'rx';
@@ -300,11 +300,11 @@ The takeaway from this issue is that if we ever see nothing rendering on the scr
   let render_ = () => Observable.return(<h1>Hello World</h1>);
 
   export default render_;
-  #+end_src
+#+end_src
 
   ~Observable.return~ creates an Observable which only returns one value that we pass it. Now we need to modify `components/main.js` too.
 
-  #+begin_src javascript
+#+begin_src javascript
     import h from 'virtual-dom/h';
     import {Observable} from 'rx';
 
@@ -327,7 +327,7 @@ The takeaway from this issue is that if we ever see nothing rendering on the scr
           );
 
     export default render_;
-  #+end_src
+#+end_src
 
   Remember the ~Observable.combineLatest~? I hope you do.
 
@@ -339,7 +339,7 @@ The takeaway from this issue is that if we ever see nothing rendering on the scr
 
   Let's clean up the index.js to turn our vDOM rendering more re-useable. Turn the *Renderer* to a class perhaps? Or a closure may be?
 
-  #+begin_src javascript
+#+begin_src javascript
   //index.js
   import {Observable} from 'rx';
 
@@ -379,11 +379,11 @@ The takeaway from this issue is that if we ever see nothing rendering on the scr
 
   let view_ = mainView_();
   render(view_, baseDOMNode);
-  #+end_src
+#+end_src
 
   Let's separate the concerns even further and move vDOM renderer to its own file. We wanna keep our index.js file as clean as we can. Create a file ~src/renderer.js~:
 
-  #+begin_src javascript
+#+begin_src javascript
   //renderer.js
   import {h} from 'virtual-dom';
   import createElement from 'virtual-dom/create-element';
@@ -417,11 +417,11 @@ The takeaway from this issue is that if we ever see nothing rendering on the scr
   };
 
   export default render;
-  #+end_src
+#+end_src
 
   And then we can change our `index.js` to this:
 
-  #+begin_src javascript
+#+begin_src javascript
   //index.js
   import mainView_ from './components/main';
   import render from './renderer';
@@ -429,7 +429,7 @@ The takeaway from this issue is that if we ever see nothing rendering on the scr
   let view_ = mainView_();
 
   render(view_, document.getElementById('app'));
-  #+end_src
+#+end_src
 
   Now that's what we call a clean main file ^_^
 
