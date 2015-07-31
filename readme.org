@@ -52,7 +52,7 @@ First let's remove everything from index.js from our previous step, and start wi
   An example of a counter built using `setInterval` and virtual DOM would look like this:
 
 #+begin_src javascript
-  let render = (count) => <h1 className='hello-world'>Hello World {count + ''}</h1>;
+  let render = (count) => <h1 className='hello-world'>Hello World {count = ''}</h1>;
   //we've made the `count = ''` above because `h` can't handle integers in this case, it needs to be strings
 
   let count = 0;
