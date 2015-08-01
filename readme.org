@@ -9,24 +9,24 @@ Dexie's interface is somewhat similar to that of a SQL database. If you've used 
 
   First we need to create a store in dexie. It's like creating a database in which we'll then create tables for ~feeds~ and ~posts~.
 
-  #+begin_src javascript
+#+begin_src javascript
   //db.js
   import Dexie from 'dexie';
 
   let db = new Dexie('yarr');
-  #+end_src
+#+end_src
 
 - *Create Tables*
 
   Next step, to create tables:
 
-  #+begin_src javascript
+#+begin_src javascript
   //The object store will allow any properties on your stored objects but you can only query them by indexed properties
   db.version(1).stores({
     feeds: 'url, name',
     posts: 'link, title, author, publishedDate, categories, read, feedUrl'
   });
-  #+end_src
+#+end_src
 
   ~db.version(1)~ is useful when we later need to migrate our data or something like that (we won't do it today). We created two stores as we discussed, but notice ~posts~ has no column for `content`. We actually don't need to mention all the fields we wanna store. We only need to mention the fields which we wanna index, so we can query with them later.
 
@@ -34,14 +34,14 @@ Dexie's interface is somewhat similar to that of a SQL database. If you've used 
 
   That's all it needs to setup the db. We can now call ~db.open()~ and start working with dexie right away.
 
-  #+begin_src javascript
+#+begin_src javascript
   //db.js
   db.open();
-  #+end_src
+#+end_src
 
   Our ~src/db.js~ looks like this at the moment:
 
-    #+begin_src javascript
+  #+begin_src javascript
     import Dexie from 'dexie';
 
     let db = new Dexie('yarr');
@@ -58,7 +58,7 @@ Dexie's interface is somewhat similar to that of a SQL database. If you've used 
     window.Feeds = db.feeds;
 
     export default {db, Posts: db.posts, Feeds: db.feeds};
-  #+end_src
+#+end_src
 
   To access our ~posts~ and ~feeds~ stores, we need to use ~db.<storeName>~ sytanx. So we are exporting them as ~Posts~ and ~Feeds~. We've also put them on `window` so we can play around with them in console.
 
@@ -93,17 +93,17 @@ So how do we actually use offline storage in our app? We'll go for `offline-firs
 
   Let's open ~src/models/feeds.js~ and import ~Feeds~ table from ~db.js~
 
-  #+bebgin_src javascript
+#+bebgin_src javascript
   //models/feeds.js
   import {Feeds} from '../db';
   .
   .
   .
-  #+end_src
+#+end_src
 
   Since we're going offline-first, let's first add feeds to db:
 
-  #+begin_src javascript
+#+begin_src javascript
   //models/feeds.js
   .
   .
@@ -133,13 +133,13 @@ So how do we actually use offline storage in our app? We'll go for `offline-firs
   .
   .
   .
-  #+end_src
+#+end_src
 
   Cool! But we are still returning the feeds by fetching them, we shall return the ~feeds_~ by fetching them from dexie-db since we're saving our feeds in it anyway.
 
   For fetching data, dexie.js provides ~db.<table>.toArray()~ to give all the documents in the dexie table as a promise of array. And how do we get value from a promise? ~flatMap~ ftw!
 
-  #+begin_src javascript
+#+begin_src javascript
   .
   .
   .
@@ -148,7 +148,7 @@ So how do we actually use offline storage in our app? We'll go for `offline-firs
         .do(x => console.log(x));
 
   export default {feeds_};
-  #+end_src
+#+end_src
 
   *An error along Observable chain*
 
@@ -156,7 +156,7 @@ So how do we actually use offline storage in our app? We'll go for `offline-firs
 
   Our ~posts-list~ view broke because our feeds don't have posts any more, but why did ~sidebar-feeds-list~ broke? Take a look at ~src/components/sidebar-feed-list.js~, we are returning an array of feeds now, not a stream of one feed at a time. We can easily convert this array to an Observable of single feeds (guess how), but we won't. Returning an array of feeds make our job of re-rendering the sidebar-feed-list much more easier whenever a new feed is added or removed. Let's change ~src/components/sidebar-feed-list.js~ to accommodate new changes:
 
-  #+begin_src javascript
+#+begin_src javascript
   // components/sidebar-feed-list.js
   .
   .
@@ -180,18 +180,18 @@ So how do we actually use offline storage in our app? We'll go for `offline-firs
   }
 
   export default render_;
-  #+end_src
+#+end_src
 
   This should work, right? But it doesn't! Why not? If we look in the console, there's an error saying:
 
-  #+begin_src bash
+#+begin_src bash
   Error occured somewhere along Observable chain TypeError: posts.map is not a function
       at http://localhost.com:8080/dist/app.js:11638:19
-  #+end_src
+#+end_src
 
   This line is from ~console.debug~ we have put in our ~src/renderer.js~. This is expected behavior from Observable. Whenever any error occurs along the Observable chain, the chain stops unless we ask it not to. That's what is happening here. Let's change ~src/models/posts.js~ to stop this error temporarily.
 
-  #+begin_src javascript
+#+begin_src javascript
   // models/posts.js
   import {feeds_} from './feeds';
   import {Observable} from 'rx';
@@ -199,11 +199,11 @@ So how do we actually use offline storage in our app? We'll go for `offline-firs
   let posts_ = Observable.return([]);
 
   export default {posts_};
-  #+end_src
+#+end_src
 
   Awesome! Sidebar has the feeds list (as expected) now. But there's another error in the console which occurs when we add those default feeds to dexie.db. It's not affecting our app because it's not part of the main Observable change that end up being rendered. But we should get rid of it. This error occurs when we try to add items with same primary_key to dexie-db. We try to add feeds to the `Feeds` table every time we refresh the page. We should check if there are any feeds in the `Feeds` and add feeds only if there are none. Let's do this:
 
-  #+begin_src javascript
+#+begin_src javascript
   .
   .
   .
@@ -222,7 +222,7 @@ So how do we actually use offline storage in our app? We'll go for `offline-firs
   .
   .
   .
-  #+end_src
+#+end_src
 
   ~Feeds.count()~ give us a promise of number of items in our `Feeds` dexie table. If the number of feeds in our dexie-db is 0, we return an Observable of feed urls, otherwise an empty one (from empty array) which is like a no-op. This got us rid from that error in console. Cool!
 
@@ -230,7 +230,7 @@ So how do we actually use offline storage in our app? We'll go for `offline-firs
 
   Noticed we aren't adding posts anywhere? We should add posts to our ~Posts~ dexie table whenever we add a feed. Let's rework that ~addFeed_~ function in ~src/models/feeds.js~:
 
-  #+begin_src javascript
+#+begin_src javascript
   //models/feeds.js
   .
   .
@@ -264,7 +264,7 @@ So how do we actually use offline storage in our app? We'll go for `offline-firs
   .
   .
   .
-  #+end_src
+#+end_src
 
   We created a helper method ~addPostToDb~ to add post to dexie table `Posts` and give us an array of status of operation. And now when we fetch a feed, we add it to ~Feeds~ table, and then create another Observable from the ~feed.entries~ array, add each post to ~Posts~, and return that Observable. Why are we doing it this way? Remember what happen when any error happen on an Observable chain? It goes straight to subscribe method, and stop the chain. Error handling is one of killer features of Rx. To reliably add the posts and feeds, we put them on the Observable chain (and not just make some random ~addPostToDb~ operations). So if any post fails to be added to the dexie db, we could catch the error (although we will not :P).
 
@@ -278,7 +278,7 @@ So how do we actually use offline storage in our app? We'll go for `offline-firs
 
   Now that we have our posts added to the db, let's serve them to our ~posts-list~ component. Open up ~src/models/posts.js~:
 
-  #+begin_src javascript
+#+begin_src javascript
   import {Posts} from '../db';
   import {Observable} from 'rx';
 
@@ -286,13 +286,13 @@ So how do we actually use offline storage in our app? We'll go for `offline-firs
         .fromPromise(Posts.orderBy('publishedDate').reverse().toArray());
 
   export default {posts_};
-  #+end_src
+#+end_src
 
   And it just worked! That's like super cool, isn't it? Go eat some candy if you said no.
 
   Now that we are getting *all* our posts in a single array, we can do a little change in ~src/components/posts-list.js~:
 
-  #+begin_src javascript
+#+begin_src javascript
   // src/components/posts-list.js
   .
   .
@@ -302,7 +302,7 @@ So how do we actually use offline storage in our app? We'll go for `offline-firs
         .map(view)
         .startWith(view());
   export default render_;
-  #+end_src
+#+end_src
 
 
 Awesome! With that done, we can move on to next step and try to make our database reactive. We'll aim for a functionality that whenever we add/remove/change anything in our offline database (IndexedDB that is), anything using that data (in UI or otherwise) shall respond too. I love this feature in Meteor (although Meteor's client side db is not persistent by default).
