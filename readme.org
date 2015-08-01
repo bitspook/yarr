@@ -9,7 +9,7 @@ Our sidebar is way too empty, let's add some controls to it.
 
   Create a file: ~components/sidebar-filter-widget.js~
 
-  #+begin_src javascript
+ #+begin_src javascript
   //components/sidebar-filter-widget.js
 
   import h from 'virtual-dom/h';
@@ -27,11 +27,11 @@ Our sidebar is way too empty, let's add some controls to it.
         Observable.return(view())
 
   export default render_;
-  #+end_src
+ #+end_src
 
   We need to update our ~components/sidebar.js~ too:
 
-  #+begin_src javascript
+ #+begin_src javascript
   //components/sidebar.js
   import {Observable} from 'rx';
   import h from 'virtual-dom/h';
@@ -57,13 +57,13 @@ Our sidebar is way too empty, let's add some controls to it.
     );
 
   export default render_;
-  #+end_src
+#+end_src
 
   *Interactivity in feed filter widget*
 
   Let's add some interactivity to our widget. We wanna switch the ~active~ class to the appropriate button on click.
 
-  #+begin_src javascript
+#+begin_src javascript
   //components/sidebar-filter-widget.js
   import h from 'virtual-dom/h';
   import {Observable} from 'rx';
@@ -94,7 +94,7 @@ Our sidebar is way too empty, let's add some controls to it.
 
 
   export default render_;
-  #+end_src
+#+end_src
 
   We get the clicks Observable with ridiculously simple eventing system we setup earlier, and switch classes on the target element. Not we're not using jQuery for switching classes, because of which our code may not work on some older browsers. But you know what? Fuck it. We don't want to support older browsers, not in our play time at least.
 
@@ -104,7 +104,7 @@ Our sidebar is way too empty, let's add some controls to it.
 
   Create a file: ~components/sidebar-fetch-n-add-widget.js~
 
-  #+begin_src javascript
+#+begin_src javascript
   //components/sidebar-fetch-n-add-widget.js
   import h from 'virtual-dom/h';
   import {Observable} from 'rx';
@@ -124,11 +124,11 @@ Our sidebar is way too empty, let's add some controls to it.
         .return(view());
 
   export default render_;
-  #+end_src
+#+end_src
 
   We also need to update ~components/sidebar.js~:
 
-  #+begin_src javascript
+#+begin_src javascript
   //components/sidebar.js
   import {Observable} from 'rx';
   import h from 'virtual-dom/h';
@@ -157,13 +157,13 @@ Our sidebar is way too empty, let's add some controls to it.
     );
 
   export default render_;
-  #+end_src
+#+end_src
 
   *Interactivity*
 
   Notice that we have an ~<input>~ field for adding a feed, but it has ~display: hidden~. We want to toggle it when we click ~Add New Feed~ button.
 
-  #+begin_src javascript
+#+begin_src javascript
   import h from 'virtual-dom/h';
   import {Observable} from 'rx';
 
@@ -197,7 +197,7 @@ Our sidebar is way too empty, let's add some controls to it.
   }
 
   export default render_;
-  #+end_src
+#+end_src
 
   We could have simply toggled a class on our ~<input>~ field, but this is another way I wanted to demonstrate. Instead of toggeling classes in side-effect code, we can do it in more pure way like this. We create an Observable for inline-styles of the input block, and create an Observable which emits ~{display: 'none'}~ or ~{display: 'inline-block'}~ alternatively when user clicks the `Add New Feed` button. ~scan~ is similar to ~reduce~, Google it.
 
@@ -207,7 +207,7 @@ Our sidebar is way too empty, let's add some controls to it.
 
   Create ~components/sidebar-feed-list.js~ file:
 
-  #+begin_src javascript
+#+begin_src javascript
   //components/sidebar-feed-list.js
   import h from 'virtual-dom/h';
   import {Observable} from 'rx';
@@ -239,11 +239,11 @@ Our sidebar is way too empty, let's add some controls to it.
   }
 
   export default render_;
-  #+end_src
+#+end_src
 
   Notice we used fake feeds to quickly get done with the widget first. Let's also add some interactivity (change `active` class on feed change).
 
-  #+begin_src javascript
+#+begin_src javascript
     .
     .
     let selectFeedClicks_ = clicksByClass_('sidebar-feed');
@@ -261,7 +261,7 @@ Our sidebar is way too empty, let's add some controls to it.
     .
     .
     .
-  #+end_src
+#+end_src
 
 ** Models
 We are trying our best to keep the components isolated, but it won't always be possible/feasible to do so. Applications have state, that's their job. But we can keep our state properly so it won't create a mess around. Let's create Models to provide sane interface for our global state (/data).
