@@ -18,7 +18,7 @@ We'll now add functionality to all those control widgets in the Sidebar. It'll b
 
   Open up ~src/components/sidebar-feed-list.js~
 
-  #+begin_src javascript
+#+begin_src javascript
   // components/sidebar-feed-filter.js
   import {dataAttrAsClass} from '../utils';
   .
@@ -38,11 +38,11 @@ We'll now add functionality to all those control widgets in the Sidebar. It'll b
   .
   .
   export {feedFilters_};
-  #+end_src
+#+end_src
 
   That's straight forward I think. You might be wondering what that `dataAttrAsClass` is. This is what it is:
 
-  #+begin_src javascript
+#+begin_src javascript
   //utils.js
   .
   .
@@ -62,21 +62,21 @@ We'll now add functionality to all those control widgets in the Sidebar. It'll b
   .
   .
   .
-  #+end_src
+#+end_src
 
   I couldn't figure out how to put `data-custom=something` with our HTMLish syntax, so I added the `data-filter=all` etc like this in the markup:
 
-  #+begin_src xml
+#+begin_src xml
   <li className="sidebar-control filter-posts data-filter-all">All</li>
   <li className="sidebar-control filter-posts active data-filter-unread">Unread</li>
   <li className="sidebar-control filter-posts data-filter-read">Read</li>
-  #+end_src
+#+end_src
 
   Notice ~data-filter-all~ class. That's how we get to know which filter user has clicked on. Yea it's hackish, suggest me a better way to do this. I'll appreciate it (what? you want a trophy?).
 
   Let's import this `feedFilters_` Observable in `components/main.js` and see what it provide us:
 
-  #+begin_src javascript
+#+begin_src javascript
   //components/main.js
   import {feedFilters_} from './sidebar-feed-filter';
   .
@@ -85,13 +85,13 @@ We'll now add functionality to all those control widgets in the Sidebar. It'll b
   .subscribe(x => console.log(x));
   .
   .
-  #+end_src
+#+end_src
 
   We get "read", "all" and "unread" in console on clicking the filter buttons. Interesting, let's convert it to what we want to filter:
 
   But wait, why are we directly using `sidebar-feed-filter` in our main? main view don't need to know about it, and it should not. Besides, feed-filter's parent is sidebar, and sidebar is answerable to main, not feed-filter. So we'll import the feedFilters_ in `sidebar` first, which will export it again for main.
 
-  #+begin_src javascript
+#+begin_src javascript
   // components/sidebar.js
   import {feedFilters_ as filterWidgetFilters_} from './sidebar-feed-filter';
   .
@@ -115,11 +115,11 @@ We'll now add functionality to all those control widgets in the Sidebar. It'll b
 
   export default render_;
   export {feedFilters_};
-  #+end_src
+#+end_src
 
   We also did some post-processing on our filters to produce what should be most easily filterable by posts-list view. We'll now import it in main from `sidebar`,
 
-  #+begin_src javascript
+#+begin_src javascript
   //components/main.js
   import sidebar_, {feedFilters_} from './sidebar';
   .
@@ -129,11 +129,11 @@ We'll now add functionality to all those control widgets in the Sidebar. It'll b
   .subscribe(x => console.log(x));
   .
   .
-  #+end_src
+#+end_src
 
   Now our feedFilters_ Observable give us ~{read: 'true|false'}|{}~, the end product that we want to filter. According to our plan, we have to pass it to `posts-list` view for consumption.
 
-  #+begin_src javascript
+#+begin_src javascript
   //components/main.js
   .
   .
@@ -145,11 +145,11 @@ We'll now add functionality to all those control widgets in the Sidebar. It'll b
   );
   .
   .
-  #+end_src
+#+end_src
 
   And we consume them in `components/posts-list.js`:
 
-  #+begin_src javascript
+#+begin_src javascript
   //components/posts-list.js
   .
   .
@@ -175,7 +175,7 @@ We'll now add functionality to all those control widgets in the Sidebar. It'll b
   .startWith(view());
 
   export default render_;
-  #+end_src
+#+end_src
 
   If that looks like a mess to you, well then it's sad; because it's your homework to figure out how we are doing the filtering. You better figure it out before moving ahead 'cause we are going to make it even more messier. (/Hint:/ It's not a mess)
 
@@ -187,7 +187,7 @@ We'll now add functionality to all those control widgets in the Sidebar. It'll b
 
   What we are going to do now is that we'll generate a similar Observable (as from filter-feed) from feed-list, and we'll somehow combine it with feed-filter Observable. It'll give us advantage that we could keep both filters active at a time without any extra work.
 
-  #+begin_src javascript
+#+begin_src javascript
   // components/sidebar-feed-list.js
   .
   .
@@ -202,7 +202,7 @@ We'll now add functionality to all those control widgets in the Sidebar. It'll b
 
   export default render_;
   export {selectedFeedUrl_};
-  #+end_src
+#+end_src
 
   We have a special entry in feed-list called "All", which is to remove the selected-feed filters and show posts from all feeds.
 
@@ -210,7 +210,7 @@ We'll now add functionality to all those control widgets in the Sidebar. It'll b
 
   Now let's import this Observable in our sidebar.js and combine it with `feedFilters_`
 
-  #+begin_src javascript
+#+begin_src javascript
   // components/sidebar.js
   import {selectedFeedUrl_} from './sidebar-feed-list';
   .
@@ -243,7 +243,7 @@ We'll now add functionality to all those control widgets in the Sidebar. It'll b
 
   export default render_;
   export {feedFilters_};
-  #+end_src
+#+end_src
 
   Try it out. This will give us two of our widgets working!
 
