@@ -1,11 +1,34 @@
 * Yarr
-*** Checkout to step 0
-Now that we have the repo cloned, let's checkout to step 0 so we can start with the tutorial.
+** Setup
+*** Clone this repo for reference and setup tutorial
+We will use this repository as a reference. The complete tutorial is divided into 10 steps (11 including this one if you're that guy). We'll create a new directory, clone this repo in a separate dir (this is just for reference), and we'll copy some basic setup from 0-setup step
+
+*Clone this repo*
+
 #+begin_src bash
-git checkout 0-setup
+git clone https://github.com/channikhabra/yarr.git ./yarr-reference
 #+end_src
 
-This will take us to a clean slate, the start of the tutorial. From here on we will begin our tutorial. The project directories should look like this after the checkout:
+*Create an empty dir where we'll write the code*
+
+#+begin_src bash
+mkdir ./yarr
+#+end_src
+
+Now we'll copy over some setup (boilerplate?) over to this dir from 0-setup step.
+
+*** Checkout to step 0
+Now that we have the repo cloned, let's checkout to step 0 so we can start with the tutorial.
+
+#+begin_src bash
+cd yarr-reference
+git checkout 0-setup
+cd ../yarr
+cp -R ../yarr-reference/* ./
+#+end_src
+
+This will be our clean slate, the start of the tutorial. From here on we will begin our tutorial. The project directories should look like this:
+
 #+begin_src bash
 .
 ├── package.json
@@ -17,23 +40,23 @@ This will take us to a clean slate, the start of the tutorial. From here on we w
 
 
 *** Install npm modules
+
 #+begin_src bash
-cd to/where/you/cloned/this/repo
 npm i
 #+end_src
 
 Take a sneek-peek at package.json.
 
-- `devDependencies` have mostly webpack stuff, and babel. We are using babel to transpile ES6 to ES5.
-- `dependencies` contain the modules we'll use in the tutorial.
+- ~devDependencies~ have mostly webpack stuff, and babel. We are using babel to transpile ES6 to ES5.
+- ~dependencies~ contain the modules we'll use in the tutorial.
   - babel-runtime
 
-    It's required for using a number of ES6 features, and generaly helps if our app is split across multiple files.
+    It's required for using a number of ES6 features, and generally helps if our app is split across multiple files.
 
   - html2hscript
 
-    We're building a RSS reader, right? So to acomplish that, we'll get HTML strings (blog posts' content) that we want to show in our HTML, but we are using virtual-dom, so instead of just dropping in our document directly, we need to parse the HTML strings to virtual-dom hyperscript, and tell virtual-dom to do the rendering.
-    This is what this module does. It parse html to virtual-dom hyperscript.
+    We're building a RSS reader, right? So eventually we'll take HTML strings (blog posts' content) from RSS Feed that we want to show in our HTML, but we are using virtual-dom, so instead of just dropping them in our document directly, we need to parse the HTML strings to virtual-dom hyperscript, and tell virtual-dom to do the rendering.
+    This is what this module do. It parse html to virtual-dom hyperscript.
 
   - dexie
 
@@ -57,63 +80,69 @@ Let's quickly write some boilerplate to check if our setup is working as it shou
 - *Create /dist and /src*
 
   If you look in the webpack.config.production.js, you'll see following config:
-#+begin_src javascript
-  entry: './src/index',
-  output: {
-    path: path.join(__dirname, 'dist'),
-    filename: 'app.js',
-    publicPath: '/'
-  },
-#+end_src
 
-  This means that webpack will enter our app from `./src/index.js` file, and will output the js after all pre-processing it need to do to `./dist/app.js` file. Let's quickly create `dist` and `src` directories.
+  #+begin_src javascript
+    entry: './src/index',
+    output: {
+      path: path.join(__dirname, 'dist'),
+      filename: 'app.js',
+      publicPath: '/'
+    },
+  #+end_src
 
-#+begin_src bash
-  mkdir src dist
-  echo "console.log('hello world');" >> src/index.js
-#+end_src
+  This means that webpack will enter our app from ~./src/index.js~ file, and will output the js after all pre-processing it need to do to ~./dist/app.js~ file. Let's quickly create ~dist~ and ~src~ directories.
+
+  #+begin_src bash
+    mkdir src dist
+    echo "console.log('hello world');" >> src/index.js
+  #+end_src
 
 - *Check webpack is working*
 
-  Running following command should create `dist/app.js` file. If it does, our setup is working and we’re good to go.
-#+begin_src bash
-  npm run build
-#+end_src
-  
+  Running following command should create ~dist/app.js~ file. If it does, our setup is working and we’re good to go.
+
+  #+begin_src bash
+    npm run build
+  #+end_src
+
   We're using npm to run our scripts
 
 - *Create index.html*
 
-  This is the only html file we’ll write in this whole tutorial. It’s only used as an entry point for including our `dist/app.js` which will take the wheel of our app.
-#+begin_src xml
-  <!doctype html>
-  <html lang="en">
-    <head>
-      <meta charset="UTF-8"/>
-      <title>Yarr : Yet Another RSS Reader</title>
-    </head>
+  This is the only html file we’ll write in this whole tutorial. It’s only used as an entry point for including our `dist/app.js` which will take the wheel.
 
-    <body class="home-template">
-      <script src="dist/app.js"></script>
-    </body>
-  </html>
+  #+begin_src xml
+    <!doctype html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8"/>
+        <title>Yarr : Yet Another RSS Reader</title>
+      </head>
 
-#+end_src
+      <body class="home-template">
+        <script src="dist/app.js"></script>
+      </body>
+    </html>
+
+  #+end_src
 
 - *Check webpack-dev-server*
 
   We'll use webpack-dev-server for live-reloading. It can do more fancy tasks, but we'll not use 'em.
   Runnng following command should start the webpack server and we'll be able to see `hello world` logged to javascript console at http://localhost:8080
 
-#+begin_src bash
-  npm start
-#+end_src
- 
- Agin we are using Webpack to run our server and if you want to see the setup files look in `server.js`.
+  #+begin_src bash
+    npm start
+  #+end_src
 
-If all is working well. We can move on to next step.
+  Again we are using Webpack to run our server and if you want to see the setup files look in `server.js`.
+
+If all is working well. We can move on to next step. Let's move our reference to next step (we'll code our way to this step).
 
 - *Checkout to next step*
-#+begin_src javascript
-  git checkout 1-hello-rx
-#+end_src
+
+  #+begin_src bash
+    cd ../yarr-reference
+    git checkout 1-hello-rx
+    cd -
+  #+end_src
