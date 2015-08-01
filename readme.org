@@ -23,7 +23,7 @@ Let's not talk much and play with Observables to get a feel. Open `index.js` fil
   Let's start webpack-dev-server first so it will watch for changes in our project and reload the browser on changes.
 
   #+begin_src bash
-  webpack-dev-server
+  npm start
   #+end_src
 
 - *Import Observable*
