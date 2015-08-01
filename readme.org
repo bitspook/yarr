@@ -1,13 +1,14 @@
 * Yarr : Renderer
-It's about time we start with building our RSS reader.
+It's about time we start building our RSS reader.
+
 Now we're not going to use any JS frameworks for writing our app, but that doesn't mean we can't take "inspiration" from frameworks. Other than using virtual-dom, one awesome idea React has made obvious is writing UI in terms of components. Isolation is the key to reuseability, scalability, maintainability, and god-knows-what-bilities. We'll try to build our UI in terms of isolated components.
 
 Using virtual DOM makes it pretty natural actually. Virtual-DOM has these requirements:
 
-- It needs complete view every time we have to make any update in DOM
-- All our virtual-dom must have a single parent, one `rootNode`. Like it must have a container element on top of the markup tree
+- It needs a complete view every time we have to make any update in DOM
+- The whole of our virtual-dom must have a single parent, one `rootNode`. It must have a container element on top of the markup tree. If you know React this will be recognisable.
 
-Now let's forget all the component bullshit for a moment and try to make our counter from last step more elegant. Here's the code from last step:
+Now let's forget all the component bullshit for a moment and try to make our counter from the last step more elegant. Here's the code from last step:
 
 #+begin_src javascript
 import {Observable} from 'rx';
@@ -48,7 +49,7 @@ We are rendering our vDOM under `document.body`. Let's be little more classy and
 </body>
 #+end_src
 
-Now we can use ~span#app~ for rendering the output. It's not really a hard requirement to do it this way, we can get away with putting our vDOM output in document.body too.
+Now we can use ~span#app~ for rendering the output. It's not really a hard requirement to do it this way and we can get away with putting our vDOM output in document.body too.
 
 #+begin_src javascript
 .
@@ -67,9 +68,9 @@ Observable
 
 - *Divide views in Components*
 
-If we look at our code now, ~render~ method provide us our *complete view* as hyperscript, and ~count~ is our state. I think that's a dead give-away for how we can have isolated components.
+If we look at our code now, ~render~ method provide us our *complete view* as hyperscript, and ~count~ is our state. I think that's a dead give-away for how we can approach having isolated components.
 
-Let's divide our view into two components: greeating and counter. Create ~/src/components~ directory, and create two files ~components/greeting.js~ and ~components/counter.js~.
+Let's divide our view into two components: greeting and counter. Create ~/src/components~ directory, and create two files ~components/greeting.js~ and ~components/counter.js~.
 
 #+begin_src javascript
 //components/greeting.js
@@ -89,7 +90,7 @@ let render = (count) => <h1>{count}</h1>;
 export default render;
 #+end_src
 
-~export default XXX~ is an ES6 construct which gives XXX to the importer of the module with whatever name importer want it with. So we can do ~import greeting from "./components/greeting";~ and get the `render` method from `components/greeting` module as `greeting`.
+~export default XXX~ is an ES6 construct which gives the XXX value to the importer of the module with whatever name importer want it to be. So we can do ~import greeting from "./components/greeting";~ and get the `render` method from `components/greeting` module as `greeting`.
 
 Let's change our `index.js` file to use our new components:
 
@@ -121,7 +122,7 @@ let baseDOMNode = document.getElementById('app');
 baseDOMNode.appendChild(rootNode);
 
 Observable
-  .interval(1000) //replace the steTimeout and `count` state variable. Interval will give us an increment-ing number every 1000 milliseconds
+  .interval(1000) //replace the steTimeout and `count` state variable. Interval will give us an incrementing number every 1000 milliseconds
   .map(n => render(n + 1))
   .subscribe(
     newView => {
@@ -174,7 +175,7 @@ let baseDOMNode = document.getElementById('app');
 baseDOMNode.appendChild(rootNode);
 
 Observable
-  .interval(1000) //replace the steTimeout and `count` state variable. Interval will give us an increment-ing number every 1000 milliseconds
+  .interval(1000) //replace the steTimeout and `count` state variable. Interval will give us an incrementing number every 1000 milliseconds
   .map(n => mainView(n + 1))
   .subscribe(
     newView => {
@@ -187,10 +188,10 @@ Observable
 
 - *Separation of concerns* and *Propagation of change*
 
-Now this is called separation of concerns. Or is this? We are passing ~count~ to ~newView~, `count` however, is something which should be internal to `counter` component, outer views don't need to know about it.
-But if we move `count` to inside the `counter` component, how will it tell the main view that it needs to be updated? And how will the main view tell our index.js that it should be re-rendered? This propagation of change can be major pain in the ass /cough/ $digest loop /cough/
+Now this is called separation of concerns. Or is it? We are passing ~count~ to ~newView~, `count` however, is something which should be internal to `counter` component, outer views don't need to know about it.
+But if we move `count` inside the `counter` component, how will it tell the main view that it needs to be updated? And how will the main view tell our index.js that it should be re-rendered? This propagation of change can be major pain in the ass /cough/ $digest loop /cough/
 
-What are we using RxJS for? Among many things, Observable are reactive. Then can push data to their user/owner/whatever. We can make `counter` component return an Observable of hyperscript (the HTMLish syntax) instead of just returning a single hyperscript value. Let's change the `counter` component and make it take care of its internal state.
+What are we using RxJS for? Among many things, Observable are reactive. They can push data to their user/owner/whatever. We can make a `counter` component return an Observable of hyperscript (the HTMLish syntax) instead of just returning a single hyperscript value. Let's change the `counter` component and make it take care of its internal state.
 
 #+begin_src javascript
 //components/counter.js
@@ -262,11 +263,11 @@ mainView_()
 
 - *Observable.prototype.startWith*?
 
-If we look at our app now, we'll see that it stays blank for a moment, and then it renders everything and counter starts. Why's that? It should render immediately. Is it a performance problem?
+If we look at our app now you will think it isn't working as it starts blank and then it renders everything and counter starts. Why's that? It should render immediately. Is it a performance problem?
 
 Hell no. Let's find the issue. Take look at our chain of Observable, where do it start? In the `counter` component, remember? `counter` uses ~Observable.interval~ as its source, so may be that's what holds the rendering for that one initial second. Let's experiment, and change the interval to `5000` and see if that increases the rendering delay. It does!
 
-Pheww, we caught the issue at least. We want our Observable to start immediately, with a default. Remember the operator for this? `startWith`. Let's change our `counter` component to use `startWith`:
+Pheww, we caught the issue at least. We want our Observable to start immediately, with a default. Remember the Rx operator for this? ~startWith~. Let's change our `counter` component to use `startWith`:
 
 #+begin_src javascript
 import {Observable} from 'rx';
@@ -282,15 +283,15 @@ let render_ = () => Observable
 export default render_;
 #+end_src
 
-That solved our delay in rendering. Yay! Notice we added ~map(n => n+1)~, that's because we already provided `0` manually.
+That solved our initial delay in rendering. Yay! Notice we added ~map(n => n+1)~, that's because we already provided `0` manually.
 
-The takeaway from this issue is that if we ever see nothing rendering on the screen, or the whole view rendering little late, it's very likely an Observable that needs to startWith a default.
+The takeaway from this issue is that if we ever see nothing rendering on the screen, or the whole view rendering a little late, it's very likely an Observable is in need of a `startWith` default value.
 
 - *Consistent System = Maintainable System*
 
-  Notice each of our component returns a function. Why's that? So that we can pass the initial state to our component if it needs any. But even though our components don't need initial state, they're still returning a function. Well, that's to keep our system consistent. Consistency is key to maintainability.
+  Notice each of our components return a function. Why's that? It's so we can pass the initial state to our component if it needs any. But even though our components don't need initial state, they're still returning a function. Well, that's to keep our system consistent. Consistency is key to maintainability.
 
-  Consistency reminds us, what a bunch of hypocrites we are! Our components return a function which returns an Observable of views (hyperscript), but look at the `greeting` component. It doesn't! We shall respect the moral code and make it consistent. Let's convert it to return an Observable.
+  Consistency reminds us, what a bunch of hypocrites we are! Our components return a function which returns an Observable of views (hyperscript), but look at the `greeting` component. It doesn't!! Ok We shall respect the moral code and make it consistent. Let's convert it to return an Observable instead.
 
   #+begin_src javascript
   //components/greeting.js
@@ -331,13 +332,15 @@ The takeaway from this issue is that if we ever see nothing rendering on the scr
 
   Remember the ~Observable.combineLatest~? I hope you do.
 
-  We need to recreate the whole view on every change, so we need to combine all the parts (i.e components) every time we need to update something in the DOM. That is what the `view` method in `main.js` do (combine the components that is). ~Observable.combineLatest~ will run the ~view~ function every time any of the participant Observable (counter_ and greeting_) emit a value, and it does so with the new value from the Observable which emitted one, and the last value of the other Observable. So we get caching (or memoizing) for free! The only condition is that each of the participant Observable must emit at least once (for that we'll use `Observable.startWith` whenever required).
+  We need to recreate the whole view on every change, so we need to combine all the parts (i.e components) every time we need to update something in the DOM. That's what the `view` method in `main.js` does (combines the components). ~Observable.combineLatest~ will run the ~view~ function every time any of the participant Observable (counter_ and greeting_) emit a new value. 
 
-  So, we have a way to make isolated, consistent components! I think it's not bad for a system with so little layers of abstraction.
+  ~combineLatest~ will make sure it combines the latest emitted value from Observable. So we get caching (or memoizing) for free! The only condition is that each of the participant Observable must emit at least once (for that we'll use `Observable.startWith` whenever required).
+
+  So, we have a way to make isolated, consistent components! I think it's not bad for a system with such little amount of layers of abstraction.
 
 - *Clean up index.js*
 
-  Let's clean up the index.js to turn our vDOM rendering more re-useable. Turn the *Renderer* to a class perhaps? Or a closure may be?
+  Let's clean up the index.js to turn our vDOM rendering to be more re-useable. Turn the *Renderer* to a class perhaps? Or a closure maybe?
 
   #+begin_src javascript
   //index.js
@@ -390,6 +393,7 @@ The takeaway from this issue is that if we ever see nothing rendering on the scr
   import diff from 'virtual-dom/diff';
   import patch from 'virtual-dom/patch';
 
+
   let render = (mainView_, baseDOMNode) => {
     let view = null;
     let rootNode = null;
@@ -432,9 +436,10 @@ The takeaway from this issue is that if we ever see nothing rendering on the scr
 
   Now that's what we call a clean main file ^_^
 
-  I hope you're not losing yourself already. Pat yourself on the back, you made through the toughest part of this tutorial. Everything will be a breeze from here on, promise.
+  I hope you've not gotten to lost an confused! 
+  If you've got this far give yourself on the back, you made it through the toughest part of this tutorial. Everything will be a breeze from here on, I promise.
 
-Now that we have somewhat saner way to write good (consistent, isolated components), we can move on to another important aspect of a web-app: events.
+Now that we have a somewhat saner way to write good (consistent, isolated components), we can move onto another important aspect of a web-app: Events.
 
 #+begin_src bash
 git checkout 4-delegated-events
