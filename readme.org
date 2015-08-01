@@ -21,7 +21,7 @@ Now if we can convert these hooks to Observable, and merge them such that when a
 
   Let's start with making a helper function that will convert a hook into an Observable. Open up ~src/db.js~:
 
-  #+begin_src javascript
+#+begin_src javascript
   // db.js
   import {Observable} from 'rx';
   .
@@ -49,7 +49,7 @@ Now if we can convert these hooks to Observable, and merge them such that when a
     Feeds: db.feeds,
     reactiveDexieTable_
   };
-  #+end_src
+#+end_src
 
   ~reactiveDexieTable_~ shall give us an Observable for listening to one of ~creating~, ~updating~, ~deleting~ hooks on a dexie table.
 
@@ -60,11 +60,11 @@ Now if we can convert these hooks to Observable, and merge them such that when a
 - *Test reactive dexie table*
 
   Let's do a quick test run. We'll create an Observable for listening to `creating` hook, clear all the feeds, refresh the browser and see if this Observable emits. Put this anywhere in ~src/db.js~:
-  #+begin_src javascript
+#+begin_src javascript
   reactiveDexieTable_(db.feeds, 'creating')
     .do(x => console.log('WHOA! Hook is working!', x))
     .subscribe();
-  #+end_src
+#+end_src
 
   Open console in your browser, do a ~Feeds.clear()~ and ~Posts.clear()~, and refresh. If you see that =Whoa!= message, our new Observable is working. Awesome! Remove code added above.
 
@@ -72,7 +72,7 @@ Now if we can convert these hooks to Observable, and merge them such that when a
 
   Let's do something little more useful. Noticed we had to clear both ~Feeds~ and ~Posts~ above (so re-adding ~Posts~ won't show an error). Keeping ~Posts~ in db don't make any sense when we've removed the `Feed` they belong to. Let's use our awesome new reactive table Observable and delete all the Posts that belong to the feed whenever we delete the feed.
 
-  #+begin_src javascript
+#+begin_src javascript
   .
   .
   .
@@ -88,7 +88,7 @@ Now if we can convert these hooks to Observable, and merge them such that when a
   .
   .
   .
-  #+end_src
+#+end_src
 
   Now go to browser's console and do a ~Feeds.clear()~ again. You'll see ~N posts deleted~ messages, and if you refresh the page, you'll see Posts are all gone.
 
@@ -96,7 +96,7 @@ Now if we can convert these hooks to Observable, and merge them such that when a
 
   That's all great, let's use this in our UI. We'll start with feeds. Open ~src/models/feeds.js~:
 
-  #+begin_src javascript
+#+begin_src javascript
   import {Feeds, reactiveDexieTable_} from '../db';
   .
   .
@@ -111,7 +111,7 @@ Now if we can convert these hooks to Observable, and merge them such that when a
         .flatMap(() => Feeds.toArray()).share();
 
   export default {feeds_};
-  #+end_src
+#+end_src
 
   We create 3 Observable to inform us whenever ~Feeds~ are updated, deleted or added, and we ~Observable.merge~ them so that we get a notification when either one of these events happen. Can you guess why we did ~.startWith('')~ here? Without ~startWith~, the Observable will keep waiting for one of the 3 events to happen. We don't want that, we want to send feeds to our UI on initial refresh too, so we start with an empty notification, and send feeds every time page refreshes, and then we send them every time something happens in our ~Feeds~ table.
 
@@ -121,7 +121,7 @@ Now if we can convert these hooks to Observable, and merge them such that when a
 
   How do we make Posts reactive now? Exactly how we made Feeds reactive, dumbass!
 
-  #+begin_src javascript
+#+begin_src javascript
   // models/posts.js
   import {Posts, reactiveDexieTable_} from '../db';
   import {Observable} from 'rx';
@@ -136,7 +136,7 @@ Now if we can convert these hooks to Observable, and merge them such that when a
         .flatMap(() => Posts.orderBy('publishedDate').reverse().toArray());
 
   export default {posts_};
-  #+end_src
+#+end_src
 
   Now if you do ~Feeds.clear()~ in console, you'll see posts-list get all cleared too, and you might also see posts getting added dynamically when you refresh the page later.
 
